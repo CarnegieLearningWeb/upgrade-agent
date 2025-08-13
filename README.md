@@ -2,9 +2,11 @@
 
 UpGrade is an open source A/B testing platform for education software. UpGradeAgent is a chatbot that can make requests to UpGrade's client API endpoints for testing, simulating, and verifying its functionalities based on natural language inputs.
 
-This document states the MVP design of this chatbot which is able to make requests to the core client API endpoints of UpGrade. The app will be built with Python using the LangGraph library. We will use the Anthropic Claude Sonnet 4 model (I will provide `ANTHROPIC_API_KEY` in the .env file) for the agents.
+This document states the MVP design of this chatbot which is able to make requests to the core client API endpoints of UpGrade. The app will be built with Python using the LangGraph library. We will use the Anthropic Claude Sonnet 4 model (claude-sonnet-4-20250514) for the agents.
 
 For the MVP, the user will be interacting with the chatbot in the Terminal console (it may later become a Slack bot).
+
+The app should prioritize accuracy over token cost. The bot must clearly understand the user’s intent and execute requests accordingly. For ambiguous queries (e.g., “What’s the status?”), it should request clarification rather than make assumptions. The app should also support continuous conversations (in-memory for now) so it can retain and use prior context.
 
 ## Quick Reference
 

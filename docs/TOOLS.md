@@ -2,16 +2,6 @@
 
 This document defines all tools (functions) that the UpGradeAgent will use to interact with the UpGrade API and perform various operations. Tools are organized by bot capabilities and include comprehensive error handling and validation.
 
-## Environment Setup
-
-Required environment variables:
-```bash
-PORT=8000
-ANTHROPIC_API_KEY=<your_key>
-UPGRADE_API_URL=http://localhost:3030/api
-UPGRADE_SERVICE_ACCOUNT_KEY_PATH=service-account-file.json
-```
-
 ## Dependencies
 
 ```python
@@ -35,16 +25,16 @@ class AgentState(TypedDict):
     # User input and conversation
     user_input: str
     bot_response: str
-    
+
     # Current context
     current_experiment_id: Optional[str]
     current_user_id: Optional[str]
     active_context: Optional[str]  # e.g., "assign-prog", "mathstream"
-    
+
     # Cached data to avoid repeated API calls
     context_metadata: Optional[Dict]
     all_experiments: Optional[List[Dict]]
-    
+
     # Error handling
     last_error: Optional[str]
     retry_count: int
@@ -58,7 +48,7 @@ class UpGradeAuth:
     def __init__(self):
         self.cached_token = None
         self.credentials = None
-        
+
     async def get_access_token(self) -> str:
         """Get or refresh access token for UpGrade API"""
         try:
@@ -68,13 +58,13 @@ class UpGradeAuth:
                     credentials_path,
                     scopes=['https://www.googleapis.com/auth/cloud-platform']
                 )
-            
+
             if not self.cached_token or self.credentials.expired:
                 self.credentials.refresh(Request())
                 self.cached_token = self.credentials.token
-                
+
             return self.cached_token
-            
+
         except Exception as e:
             raise Exception(f"Authentication failed: {str(e)}")
 
@@ -115,12 +105,12 @@ async def explain_upgrade_concept(
 ) -> Dict[str, Any]:
     """
     Explain UpGrade concepts and terminology
-    
+
     Args:
         concept: The term/concept to explain (e.g., "app context", "decision point")
         include_examples: Whether to include practical examples
         include_related_terms: Whether to include related concepts
-        
+
     Returns:
         {
             "success": bool,
@@ -144,6 +134,7 @@ async def explain_upgrade_concept(
 ```
 
 **Supported Concepts**:
+
 - App Context / Context
 - Unit of Assignment / Assignment Unit
 - Consistency Rule
@@ -169,14 +160,14 @@ async def explain_upgrade_concept(
 async def list_upgrade_concepts() -> Dict[str, Any]:
     """
     List all available UpGrade concepts for explanation
-    
+
     Returns:
         {
             "success": bool,
             "data": {
                 "categories": {
                     "experiment_design": List[str],
-                    "assignment_rules": List[str], 
+                    "assignment_rules": List[str],
                     "data_collection": List[str],
                     "user_management": List[str]
                 },
@@ -203,13 +194,13 @@ async def list_upgrade_concepts() -> Dict[str, Any]:
 async def check_upgrade_health() -> Dict[str, Any]:
     """
     Check UpGrade service health and version
-    
+
     Returns:
         {
             "success": bool,
             "data": {
                 "name": str,
-                "version": str, 
+                "version": str,
                 "description": str,
                 "status": "healthy" | "unhealthy"
             },
@@ -222,6 +213,7 @@ async def check_upgrade_health() -> Dict[str, Any]:
 ```
 
 **Implementation Notes**:
+
 - No authentication required
 - Timeout: 5 seconds (health check should be fast)
 - No retries needed for health checks
@@ -240,7 +232,7 @@ async def check_upgrade_health() -> Dict[str, Any]:
 async def get_context_metadata() -> Dict[str, Any]:
     """
     Get all available app contexts and their supported values
-    
+
     Returns:
         {
             "success": bool,
@@ -250,7 +242,7 @@ async def get_context_metadata() -> Dict[str, Any]:
                 "by_context": {
                     "assign-prog": {
                         "conditions": List[str],
-                        "group_types": List[str], 
+                        "group_types": List[str],
                         "sites": List[str],
                         "targets": List[str]
                     },
@@ -275,7 +267,7 @@ async def get_context_metadata() -> Dict[str, Any]:
 async def get_experiment_names() -> Dict[str, Any]:
     """
     Get all experiment names and IDs
-    
+
     Returns:
         {
             "success": bool,
@@ -306,12 +298,12 @@ async def get_all_experiments(
 ) -> Dict[str, Any]:
     """
     Get all experiments with optional filtering
-    
+
     Args:
         context_filter: Filter by app context (e.g., "assign-prog")
         status_filter: Filter by status ("inactive", "enrolling", "enrollmentComplete")
         date_filter: Filter by creation date
-        
+
     Returns:
         {
             "success": bool,
@@ -326,7 +318,7 @@ async def get_all_experiments(
             },
             "raw_response": List[Dict],
             "error": Optional[str],
-            "error_type": Optional[str], 
+            "error_type": Optional[str],
             "endpoint": str
         }
     """
@@ -342,10 +334,10 @@ async def get_all_experiments(
 async def get_experiment_details(experiment_id: str) -> Dict[str, Any]:
     """
     Get detailed experiment configuration
-    
+
     Args:
         experiment_id: UUID of the experiment
-        
+
     Returns:
         {
             "success": bool,
@@ -395,7 +387,7 @@ async def create_experiment(
     name: str,
     context: str,
     assignment_unit: str = "individual",
-    consistency_rule: str = "individual", 
+    consistency_rule: str = "individual",
     conditions: List[Dict] = None,
     decision_points: List[Dict] = None,
     description: str = "",
@@ -408,7 +400,7 @@ async def create_experiment(
 ) -> Dict[str, Any]:
     """
     Create a new experiment with validation
-    
+
     Args:
         name: Experiment name
         context: App context (must be valid from contextMetadata)
@@ -423,7 +415,7 @@ async def create_experiment(
         exclusion_users: List of user IDs to exclude
         inclusion_groups: List of group specifications
         exclusion_groups: List of group specifications
-        
+
     Returns:
         {
             "success": bool,
@@ -444,6 +436,7 @@ async def create_experiment(
 ```
 
 **Validation Logic**:
+
 - Verify context exists in contextMetadata
 - Verify conditions are supported by context
 - Verify decision points (sites/targets) are supported
@@ -464,11 +457,11 @@ async def update_experiment(
 ) -> Dict[str, Any]:
     """
     Update experiment configuration
-    
+
     Args:
         experiment_id: UUID of experiment to update
         updates: Dictionary of fields to update
-        
+
     Returns:
         {
             "success": bool,
@@ -499,11 +492,11 @@ async def update_experiment_status(
 ) -> Dict[str, Any]:
     """
     Update experiment status
-    
+
     Args:
         experiment_id: UUID of experiment
         new_status: "inactive", "enrolling", or "enrollmentComplete"
-        
+
     Returns:
         {
             "success": bool,
@@ -532,10 +525,10 @@ async def update_experiment_status(
 async def delete_experiment(experiment_id: str) -> Dict[str, Any]:
     """
     Delete an experiment
-    
+
     Args:
         experiment_id: UUID of experiment to delete
-        
+
     Returns:
         {
             "success": bool,
@@ -572,13 +565,13 @@ async def initialize_user(
 ) -> Dict[str, Any]:
     """
     Initialize user with group memberships
-    
+
     Args:
         user_id: Unique identifier for user
         context: App context for validation
         group_memberships: Dict of group types to group IDs (for segments)
         working_group: Dict of current active group memberships (for assignment)
-        
+
     Returns:
         {
             "success": bool,
@@ -612,13 +605,13 @@ async def get_user_assignments(
 ) -> Dict[str, Any]:
     """
     Get user's experiment condition assignments
-    
+
     Args:
         user_id: User identifier (for header)
         context: App context
         site_filter: Optional site filter
         target_filter: Optional target filter
-        
+
     Returns:
         {
             "success": bool,
@@ -661,14 +654,14 @@ async def mark_decision_point_visit(
 ) -> Dict[str, Any]:
     """
     Mark that user visited decision point
-    
+
     Args:
         user_id: User identifier (for header)
         site: Decision point site
         target: Decision point target
         assigned_condition: Condition data from /v6/assign
         status: "condition applied", "condition not applied", "no condition assigned"
-        
+
     Returns:
         {
             "success": bool,
@@ -705,7 +698,7 @@ async def simulate_user_journey(
 ) -> Dict[str, Any]:
     """
     Complete user journey simulation
-    
+
     Args:
         user_id: User identifier
         context: App context
@@ -713,7 +706,7 @@ async def simulate_user_journey(
         target: Decision point target
         group_memberships: Optional group memberships
         working_group: Optional working group
-        
+
     Returns:
         {
             "success": bool,
@@ -754,13 +747,13 @@ async def test_condition_balance(
 ) -> Dict[str, Any]:
     """
     Test condition balance by enrolling multiple users
-    
+
     Args:
         experiment_id: Experiment to test
         num_users: Number of users to simulate (default 100)
         user_id_pattern: Pattern for user IDs ("{uuid}" will be replaced)
         group_settings: Optional group memberships for all users
-        
+
     Returns:
         {
             "success": bool,
@@ -777,7 +770,7 @@ async def test_condition_balance(
                 "total_users_tested": int,
                 "successful_enrollments": int,
                 "condition_distribution": Dict[str, {  # Dynamic - matches actual conditions
-                    "count": int, 
+                    "count": int,
                     "percentage": float,
                     "expected_percentage": float,
                     "deviation": float
@@ -814,12 +807,12 @@ async def test_consistency_rules(
 ) -> Dict[str, Any]:
     """
     Test assignment consistency across experiment phases
-    
+
     Args:
         experiment_id: Experiment to test
         test_users: List of user IDs to test (generates if None)
         phases_to_test: Which experiment phases to test
-        
+
     Returns:
         {
             "success": bool,
@@ -865,12 +858,12 @@ async def generate_test_users(
 ) -> Dict[str, Any]:
     """
     Generate test user data
-    
+
     Args:
         count: Number of users to generate
         user_id_pattern: Pattern for user IDs
         group_distribution: Optional group membership distribution
-        
+
     Returns:
         {
             "success": bool,
@@ -894,6 +887,7 @@ async def generate_test_users(
 ## Error Handling Patterns
 
 ### Retry Logic
+
 ```python
 async def make_api_request_with_retry(
     method: str,
@@ -924,134 +918,136 @@ async def make_api_request_with_retry(
 ```
 
 ### Validation Helpers
+
 ```python
 async def validate_experiment_config(config: Dict, context_metadata: Dict) -> List[str]:
     """Validate experiment configuration against context metadata"""
     errors = []
-    
+
     context = config.get('context')
-    
+
     # Validate context exists
     if context not in context_metadata:
         errors.append(f"Invalid context: {context}")
         return errors  # Can't validate further without valid context
-    
+
     context_data = context_metadata[context]
-    
+
     # Validate conditions
     context_conditions = context_data.get('CONDITIONS', [])
     for condition in config.get('conditions', []):
         condition_code = condition.get('conditionCode')
         if condition_code not in context_conditions:
             errors.append(f"Invalid condition '{condition_code}' for context '{context}'. Valid conditions: {context_conditions}")
-    
+
     # Validate decision points (sites and targets)
     valid_sites = context_data.get('EXP_POINTS', [])  # Sites are EXP_POINTS
     valid_targets = context_data.get('EXP_IDS', [])   # Targets are EXP_IDS
-    
+
     for decision_point in config.get('decision_points', []):
         site = decision_point.get('site')
         target = decision_point.get('target')
-        
+
         if site and site not in valid_sites:
             errors.append(f"Invalid site '{site}' for context '{context}'. Valid sites: {valid_sites}")
-        
+
         if target and target not in valid_targets:
             errors.append(f"Invalid target '{target}' for context '{context}'. Valid targets: {valid_targets}")
-    
+
     # Validate group types (for group assignment and segments)
     valid_group_types = context_data.get('GROUP_TYPES', [])
-    
+
     # Check assignment unit group type
     if config.get('assignment_unit') == 'group':
         group_type = config.get('group')  # This would be specified when creating group assignment
         if group_type and group_type not in valid_group_types:
             errors.append(f"Invalid group type '{group_type}' for context '{context}'. Valid group types: {valid_group_types}")
-    
+
     # Check group memberships in segments
     for group_spec in config.get('inclusion_groups', []):
         group_type = group_spec.get('type')
         if group_type and group_type not in valid_group_types and group_type != "All":
             errors.append(f"Invalid inclusion group type '{group_type}' for context '{context}'. Valid group types: {valid_group_types}")
-    
+
     for group_spec in config.get('exclusion_groups', []):
         group_type = group_spec.get('type')
         if group_type and group_type not in valid_group_types and group_type != "All":
             errors.append(f"Invalid exclusion group type '{group_type}' for context '{context}'. Valid group types: {valid_group_types}")
-    
+
     # Validate assignment weights sum to 100%
     conditions = config.get('conditions', [])
     if conditions:
         total_weight = sum(condition.get('assignmentWeight', 0) for condition in conditions)
         if abs(total_weight - 100) > 0.01:  # Allow for small floating point errors
             errors.append(f"Condition assignment weights must sum to 100%, got {total_weight}%")
-    
+
     # Validate unsupported experiment features
     if config.get('type') == 'Factorial':
         errors.append("Factorial experiments are not supported")
-    
+
     if config.get('assignment_unit') == 'within-subjects':
         errors.append("Within-subjects experiments are not supported")
-    
+
     assignment_algorithm = config.get('assignment_algorithm', '').lower()
     if assignment_algorithm in ['stratified_random_sampling', 'ts_configurable']:
         errors.append(f"Assignment algorithm '{assignment_algorithm}' is not supported")
-    
+
     # Validate consistency rule matches assignment unit
     assignment_unit = config.get('assignment_unit')
     consistency_rule = config.get('consistency_rule')
-    
+
     if assignment_unit == 'individual' and consistency_rule == 'group':
         errors.append("Cannot use group consistency rule with individual assignment unit")
-    
+
     return errors
 
 async def validate_user_groups(group_data: Dict, context: str, context_metadata: Dict) -> List[str]:
     """Validate user group memberships against context metadata"""
     errors = []
-    
+
     if context not in context_metadata:
         errors.append(f"Invalid context: {context}")
         return errors
-    
+
     valid_group_types = context_metadata[context].get('GROUP_TYPES', [])
-    
+
     # Validate group memberships
     for group_type, group_ids in group_data.get('group', {}).items():
         if group_type not in valid_group_types:
             errors.append(f"Invalid group type '{group_type}' for context '{context}'. Valid group types: {valid_group_types}")
-    
+
     # Validate working group
     for group_type, group_id in group_data.get('workingGroup', {}).items():
         if group_type not in valid_group_types:
             errors.append(f"Invalid working group type '{group_type}' for context '{context}'. Valid group types: {valid_group_types}")
-    
+
     return errors
 
 async def validate_decision_point(site: str, target: str, context: str, context_metadata: Dict) -> List[str]:
     """Validate a single decision point against context metadata"""
     errors = []
-    
+
     if context not in context_metadata:
         errors.append(f"Invalid context: {context}")
         return errors
-    
+
     context_data = context_metadata[context]
     valid_sites = context_data.get('EXP_POINTS', [])
     valid_targets = context_data.get('EXP_IDS', [])
-    
+
     if site not in valid_sites:
         errors.append(f"Invalid site '{site}' for context '{context}'. Valid sites: {valid_sites}")
-    
+
     if target not in valid_targets:
         errors.append(f"Invalid target '{target}' for context '{context}'. Valid targets: {valid_targets}")
-    
+
     return errors
 ```
 
 ## Usage Patterns
 
 ### Basic Tool Usage in LangGraph
+
 ```python
 from langgraph.prebuilt import ToolExecutor
 
@@ -1070,6 +1066,7 @@ def experiment_management_node(state: AgentState):
 ```
 
 ### State Management
+
 ```python
 def update_state_with_tool_result(state: AgentState, tool_result: Dict) -> AgentState:
     """Helper to update state with tool results"""
@@ -1080,6 +1077,6 @@ def update_state_with_tool_result(state: AgentState, tool_result: Dict) -> Agent
     else:
         state["last_error"] = tool_result["error"]
         state["retry_count"] += 1
-    
+
     return state
 ```
