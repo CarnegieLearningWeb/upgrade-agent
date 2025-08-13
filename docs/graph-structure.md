@@ -1,568 +1,658 @@
-# UpGradeAgent Graph Structure Documentation
+# Streamlined UpGradeAgent Architecture
 
-This document defines the LangGraph architecture for UpGradeAgent, including node structure, state management, routing logic, and error handling patterns.
+## Overview
 
-## Architecture Overview
+This document defines a **streamlined but complete architecture** for UpGradeAgent that handles all core requirements without over-engineering. The architecture addresses the key challenges identified in the original router-based approach while maintaining simplicity and reliability.
 
-UpGradeAgent uses a **router-based architecture** with specialized capability nodes. This design provides clear separation of concerns, easy debugging, and maintainable code structure.
+## Why This Architecture
 
-```
-User Input → Router → Capability Node → Response Formatter → User
-             ↓
-        Error Handler (if needed)
-```
+### Problems with Original Router-Based Approach
+1. **Premature commitment**: Router makes decisions without full context
+2. **Poor ambiguity handling**: Can't handle queries like "What's the status?"
+3. **No multi-step support**: Each interaction treated independently
+4. **Safety concerns**: No confirmation before potentially destructive actions
+5. **Limited conversation memory**: Can't build on previous exchanges
 
-## Graph State Schema
+### Our Solution: Context-Aware Conversation Flow
+Instead of simple routing, we use an **intelligent conversation analyzer** that:
+- Analyzes queries with full conversational and system context
+- Handles ambiguous queries by asking for clarification
+- Progressively gathers missing information through natural conversation
+- Always confirms before executing actions
+- Maintains conversation memory and context
 
-```python
-from typing import TypedDict, Optional, List, Dict, Any
+## Essential Nodes and Their Necessity
+
+After careful review, here are the **5 essential nodes** that provide complete functionality without redundancy:
+
+### 1. **Conversation Analyzer** (The Brain)
+**Why Necessary**: Core intelligence that replaces unreliable router approach. Analyzes user input with full context and makes intelligent decisions.
+
+**What it handles**:
+- Greetings: "Hi, how are you?" → Direct friendly response
+- General questions: "What is A/B testing?" → Direct explanation  
+- UpGrade queries: "What's the status?" → Asks for clarification
+- Action requests: "Create experiment" → Determines what info is needed
+
+**Why not multiple nodes**: One intelligent analyzer is better than multiple simple routers because it has full context and can make nuanced decisions.
+
+### 2. **Information Gatherer** 
+**Why Necessary**: Many UpGrade operations require multiple parameters. Handles progressive collection naturally.
+
+**What it handles**:
+- Missing required info: "Create experiment" → Asks for name, context, etc.
+- Contextual prompts: Shows available contexts, experiments, etc.
+- User-friendly collection: Accepts various input formats
+- Cancellation: Allows users to abort mid-process
+
+**Why essential**: Without this, the app would either fail on incomplete requests or make dangerous assumptions.
+
+### 3. **Confirmation Handler**
+**Why Necessary**: UpGrade operations can have significant impact. User confirmation is a safety requirement.
+
+**What it handles**:
+- Action confirmation: Shows what will be done before doing it
+- Risk awareness: Warns about irreversible actions  
+- User control: Allows modification or cancellation
+
+**Why essential**: Safety and user trust. Never execute potentially impactful actions without explicit confirmation.
+
+### 4. **Tool Executor**
+**Why Necessary**: Executes actual UpGrade API calls with proper error handling.
+
+**What it handles**:
+- API tool execution: Calls create_experiment, test_balance, etc.
+- Error handling: Graceful failure with helpful messages
+- Result collection: Gathers tool outputs for response generation
+
+**Why essential**: This is where the actual work gets done. Without it, the app is just a chatbot with no functionality.
+
+### 5. **Response Generator**
+**Why Necessary**: Converts tool results and system state into natural, helpful responses.
+
+**What it handles**:
+- Tool result synthesis: Converts API responses to user-friendly messages
+- Error communication: Explains what went wrong and how to fix it
+- Conversation flow: Provides next steps and suggestions
+
+**Why essential**: Raw tool outputs aren't user-friendly. This makes the interaction natural and helpful.
+
+## What We Removed (Avoiding Over-Engineering)
+
+1. **Separate routing nodes**: Replaced with one intelligent analyzer
+2. **Complex state enums**: Simplified to just 5 clear states
+3. **Risk assessment node**: Integrated into confirmation handler  
+4. **Separate clarification node**: Handled by the analyzer
+5. **Multiple response types**: Simplified to essential types
+6. **Over-engineered error handling**: Basic but sufficient error handling
+
+## Architecture Benefits
+
+1. **Handles ambiguity**: "What's the status?" gets proper clarification
+2. **Supports multi-step operations**: Naturally collects missing information
+3. **Maintains safety**: Always confirms before actions
+4. **Stays conversational**: Handles greetings and general questions
+5. **Remains simple**: 5 nodes with clear responsibilities
+6. **Enables testing**: Each node can be tested independently
+
+## Implementation
+
+Minimal but complete architecture for reliable conversation handling
+
+from typing import TypedDict, Optional, List, Dict, Any, Literal
 from enum import Enum
 
-class NodeStatus(Enum):
-    SUCCESS = "success"
-    ERROR = "error"
-    RETRY = "retry"
-    INCOMPLETE = "incomplete"
+class ConversationState(Enum):
+    ANALYZING = "analyzing"           # Understanding user input
+    GATHERING_INFO = "gathering_info" # Collecting missing parameters
+    CONFIRMING = "confirming"         # Getting user approval
+    EXECUTING = "executing"           # Running tools
+    RESPONDING = "responding"         # Generating final response
 
 class AgentState(TypedDict):
-    # User interaction
+    # === Core Conversation ===
     user_input: str
+    conversation_history: List[Dict[str, str]]  # Recent context
+    current_state: ConversationState
+    
+    # === Operation Context ===
+    intended_action: Optional[str]        # What user wants to do
+    action_confidence: float              # How sure we are (0.0-1.0)
+    required_params: Dict[str, Any]       # What we need for this action
+    gathered_params: Dict[str, Any]       # What we've collected
+    missing_params: List[str]             # What's still needed
+    
+    # === Tool Execution ===
+    planned_tools: List[Dict[str, Any]]   # Tools to execute
+    tool_results: List[Dict[str, Any]]    # Execution results
+    
+    # === Response ===
     bot_response: str
-    conversation_history: List[Dict[str, str]]  # [{"user": "...", "bot": "..."}]
+    response_type: Literal["answer", "question", "confirmation", "clarification"]
+    suggested_actions: List[str]          # Quick action buttons
     
-    # Routing and flow control
-    detected_capability: Optional[str]  # "terminology", "version_check", "experiments", etc.
-    routing_confidence: Optional[float]  # 0.0 to 1.0
-    needs_clarification: bool
-    clarification_options: Optional[List[str]]
+    # === System Context (cached) ===
+    available_experiments: Optional[List[Dict]]
+    context_metadata: Optional[Dict]
     
-    # Current operation context
-    current_experiment_id: Optional[str]
-    current_user_id: Optional[str] 
-    active_context: Optional[str]  # App context like "assign-prog"
-    operation_type: Optional[str]  # "create", "update", "test", "simulate"
+    # === Error Handling ===
+    errors: List[str]
+
+# =============================================================================
+# NODE 1: CONVERSATION ANALYZER (The Brain)
+# =============================================================================
+
+class ConversationAnalyzer:
+    """
+    Single intelligent node that analyzes user input with full context
+    and determines what to do next
+    """
     
-    # Cached data (to avoid repeated API calls)
-    context_metadata: Optional[Dict[str, Any]]
-    all_experiments: Optional[List[Dict]]
-    experiment_details: Optional[Dict]
+    def __init__(self):
+        self.llm = ChatAnthropic(model="claude-3-5-sonnet-20241022", temperature=0.1)
+        self.action_templates = self._load_action_templates()
     
-    # Multi-step operations
-    step_counter: int
-    total_steps: Optional[int]
-    step_results: List[Dict[str, Any]]
-    pending_confirmations: List[str]
+    def _load_action_templates(self) -> Dict:
+        """Define what parameters each action needs"""
+        return {
+            "create_experiment": {
+                "required": ["name", "context"],
+                "optional": ["conditions", "decision_points", "assignment_unit"],
+                "defaults": {
+                    "assignment_unit": "individual",
+                    "conditions": [{"code": "control", "weight": 50}, {"code": "variant", "weight": 50}]
+                }
+            },
+            "test_condition_balance": {
+                "required": ["experiment_id"],
+                "optional": ["num_users"],
+                "defaults": {"num_users": 100}
+            },
+            "update_experiment_status": {
+                "required": ["experiment_id", "new_status"]
+            },
+            "explain_concept": {
+                "required": ["concept"]
+            },
+            "list_experiments": {
+                "optional": ["context_filter", "status_filter"]
+            }
+        }
     
-    # Error handling and retry logic
-    last_error: Optional[str]
-    error_type: Optional[str]  # "api", "validation", "network", "user_input"
-    retry_count: int
-    max_retries: int
-    node_status: NodeStatus
+    def __call__(self, state: AgentState) -> Dict[str, Any]:
+        """Analyze input and determine next action"""
+        
+        # Build analysis context
+        analysis_prompt = f"""
+        You are UpGradeAgent, an expert assistant for A/B testing with UpGrade.
+        
+        CONVERSATION CONTEXT:
+        {self._format_conversation_history(state)}
+        
+        SYSTEM STATE:
+        - Available experiments: {len(state.get('available_experiments', []))}
+        - Available contexts: {list(state.get('context_metadata', {}).keys())}
+        
+        CURRENT USER INPUT: "{state['user_input']}"
+        
+        CAPABILITIES:
+        - Answer questions about A/B testing and UpGrade concepts
+        - Health checks and system status  
+        - List, create, update, delete experiments
+        - Simulate users and test experiment balance
+        - Handle greetings and general conversation
+        
+        Analyze this input and respond with JSON:
+        {{
+            "intent_type": "direct_answer|needs_tools|needs_info|unclear|greeting",
+            "confidence": 0.85,
+            "intended_action": "create_experiment|list_experiments|explain_concept|greeting|etc",
+            "extracted_params": {{"param": "value"}},
+            "missing_params": ["param1", "param2"],
+            "response_strategy": "answer_directly|gather_info|ask_clarification|execute_tools",
+            "direct_answer": "answer if can respond directly",
+            "clarification_needed": "what to ask if unclear"
+        }}
+        """
+        
+        response = self.llm.invoke(analysis_prompt)
+        analysis = json.loads(response.content)
+        
+        return self._process_analysis(state, analysis)
     
-    # Tool execution results
-    tool_results: List[Dict[str, Any]]
-    raw_api_responses: List[Dict[str, Any]]  # For users who want raw data
-```
-
-## Node Architecture
-
-### 1. Entry Node: `input_router`
-
-**Purpose**: Analyze user input and route to appropriate capability nodes
-**Inputs**: User input, conversation history
-**Outputs**: Detected capability, routing confidence
-
-```python
-def input_router(state: AgentState) -> AgentState:
-    """
-    Route user input to appropriate capability node
-    
-    Logic:
-    1. Analyze user input using Claude
-    2. Detect intent and capability needed
-    3. Extract parameters and context
-    4. Set routing information in state
-    """
-```
-
-**Routing Categories**:
-- `terminology`: Questions about UpGrade concepts
-- `version_check`: Health/version requests
-- `list_experiments`: List/search experiments
-- `experiment_details`: Get specific experiment info
-- `experiment_management`: Create/update/delete experiments
-- `user_simulation`: Simulate user visits
-- `testing`: Balance testing, consistency testing
-- `clarification_needed`: Ambiguous input
-- `unsupported`: Requests for unsupported features
-
-### 2. Capability Nodes
-
-#### 2.1 `terminology_node`
-
-**Purpose**: Handle UpGrade concept explanations
-**Tools Used**: `explain_upgrade_concept`, `list_upgrade_concepts`
-
-```python
-def terminology_node(state: AgentState) -> AgentState:
-    """
-    Handle terminology and concept explanation requests
-    
-    Supported patterns:
-    - "What is [concept]?"
-    - "Explain [concept]"
-    - "How do [concept1] and [concept2] work together?"
-    - "What concepts can you explain?"
-    - "Help with [topic]"
-    """
-```
-
-#### 2.2 `version_check_node`
-
-**Purpose**: Handle health checks and version info
-**Tools Used**: `check_upgrade_health`
-
-```python
-def version_check_node(state: AgentState) -> AgentState:
-    """
-    Handle version and health check requests
-    
-    Supported patterns:
-    - "What version?"
-    - "Is UpGrade running?"
-    - "Health check"
-    """
-```
-
-#### 2.3 `experiment_listing_node`
-
-**Purpose**: List and search experiments
-**Tools Used**: `get_all_experiments`, `get_experiment_names`
-
-```python
-def experiment_listing_node(state: AgentState) -> AgentState:
-    """
-    Handle experiment listing and searching
-    
-    Supported patterns:
-    - "List all experiments"
-    - "Show experiments in [context]"
-    - "Find experiments created today"
-    - "What experiments are running?"
-    """
-```
-
-#### 2.4 `experiment_details_node`
-
-**Purpose**: Get detailed experiment information
-**Tools Used**: `get_experiment_details`, `get_context_metadata`
-
-```python
-def experiment_details_node(state: AgentState) -> AgentState:
-    """
-    Handle detailed experiment information requests
-    
-    Supported patterns:
-    - "Show details for [experiment]"
-    - "What are the conditions in [experiment]?"
-    - "Explain the setup of [experiment]"
-    """
-```
-
-#### 2.5 `experiment_management_node`
-
-**Purpose**: Create, update, delete experiments
-**Tools Used**: `create_experiment`, `update_experiment`, `update_experiment_status`, `delete_experiment`
-
-```python
-def experiment_management_node(state: AgentState) -> AgentState:
-    """
-    Handle experiment CRUD operations
-    
-    Supported patterns:
-    - "Create an experiment with..."
-    - "Update [experiment] to..."
-    - "Start/stop [experiment]"
-    - "Delete [experiment]"
-    
-    Multi-step process:
-    1. Validate parameters
-    2. Get user confirmation
-    3. Execute operation
-    4. Verify result
-    """
-```
-
-#### 2.6 `user_simulation_node`
-
-**Purpose**: Simulate user decision point visits
-**Tools Used**: `initialize_user`, `get_user_assignments`, `mark_decision_point_visit`, `simulate_user_journey`
-
-```python
-def user_simulation_node(state: AgentState) -> AgentState:
-    """
-    Handle user simulation requests
-    
-    Supported patterns:
-    - "Simulate user [id] visiting [decision point]"
-    - "Initialize user [id] with groups [...]"
-    - "What condition would user [id] get?"
-    """
-```
-
-#### 2.7 `testing_node`
-
-**Purpose**: Perform balance and consistency testing
-**Tools Used**: `test_condition_balance`, `test_consistency_rules`, `generate_test_users`
-
-```python
-def testing_node(state: AgentState) -> AgentState:
-    """
-    Handle testing and analysis requests
-    
-    Supported patterns:
-    - "Test condition balance for [experiment]"
-    - "Test consistency rules for [experiment]" 
-    - "Enroll 100 users in [experiment]"
-    
-    Multi-step process:
-    1. Prepare experiment (ensure correct status)
-    2. Generate/validate test parameters
-    3. Execute test
-    4. Analyze results
-    5. Generate report
-    """
-```
-
-### 3. Support Nodes
-
-#### 3.1 `clarification_node`
-
-**Purpose**: Handle ambiguous inputs and gather missing information
-**Tools Used**: Context-specific validation tools
-
-```python
-def clarification_node(state: AgentState) -> AgentState:
-    """
-    Handle requests that need clarification
-    
-    Examples:
-    - Multiple experiments with similar names
-    - Missing required parameters
-    - Ambiguous experiment references
-    """
-```
-
-#### 3.2 `error_handler_node`
-
-**Purpose**: Handle errors and determine retry strategies
-**Tools Used**: None (pure logic)
-
-```python
-def error_handler_node(state: AgentState) -> AgentState:
-    """
-    Handle errors and implement retry logic
-    
-    Error types:
-    - API errors (network, timeout, 500s)
-    - Validation errors (invalid parameters)
-    - User input errors (typos, missing info)
-    - Unsupported feature requests
-    """
-```
-
-#### 3.3 `response_formatter_node`
-
-**Purpose**: Format final responses for user consumption
-**Tools Used**: None (pure formatting)
-
-```python
-def response_formatter_node(state: AgentState) -> AgentState:
-    """
-    Format responses based on capability and user preferences
-    
-    Formatting options:
-    - Detailed vs summary
-    - Include raw API responses
-    - Table formatting for test results
-    - Error message formatting
-    """
-```
-
-## Routing Logic
-
-### Conditional Edges
-
-```python
-def route_after_input(state: AgentState) -> str:
-    """Route based on detected capability"""
-    capability = state["detected_capability"]
-    confidence = state["routing_confidence"]
-    
-    if confidence < 0.7:
-        return "clarification_node"
-    
-    capability_routes = {
-        "terminology": "terminology_node",
-        "version_check": "version_check_node", 
-        "list_experiments": "experiment_listing_node",
-        "experiment_details": "experiment_details_node",
-        "experiment_management": "experiment_management_node",
-        "user_simulation": "user_simulation_node",
-        "testing": "testing_node",
-        "unsupported": "error_handler_node"
-    }
-    
-    return capability_routes.get(capability, "clarification_node")
-
-def route_after_capability(state: AgentState) -> str:
-    """Route after capability node execution"""
-    if state["node_status"] == NodeStatus.ERROR:
-        if state["retry_count"] < state["max_retries"]:
-            return "error_handler_node"
+    def _process_analysis(self, state: AgentState, analysis: Dict) -> Dict[str, Any]:
+        """Process analysis results and set next state"""
+        
+        confidence = analysis.get("confidence", 0.0)
+        intent_type = analysis.get("intent_type")
+        strategy = analysis.get("response_strategy")
+        
+        # Handle different scenarios
+        if intent_type == "greeting" or strategy == "answer_directly":
+            # Can respond directly
+            return {
+                "current_state": ConversationState.RESPONDING,
+                "bot_response": analysis.get("direct_answer", ""),
+                "response_type": "answer"
+            }
+        
+        elif confidence < 0.7 or strategy == "ask_clarification":
+            # Need clarification
+            return {
+                "current_state": ConversationState.RESPONDING,
+                "bot_response": analysis.get("clarification_needed", "I'm not sure what you mean. Could you clarify?"),
+                "response_type": "clarification"
+            }
+        
+        elif strategy == "gather_info":
+            # Need to collect information
+            return {
+                "current_state": ConversationState.GATHERING_INFO,
+                "intended_action": analysis.get("intended_action"),
+                "action_confidence": confidence,
+                "gathered_params": analysis.get("extracted_params", {}),
+                "missing_params": analysis.get("missing_params", [])
+            }
+        
+        elif strategy == "execute_tools":
+            # Ready to execute
+            return {
+                "current_state": ConversationState.CONFIRMING,
+                "intended_action": analysis.get("intended_action"),
+                "gathered_params": analysis.get("extracted_params", {}),
+                "planned_tools": self._plan_tool_execution(analysis.get("intended_action"), analysis.get("extracted_params", {}))
+            }
+        
         else:
-            return "response_formatter_node"
+            # Default fallback
+            return {
+                "current_state": ConversationState.RESPONDING,
+                "bot_response": "I'm not sure how to help with that. Could you try rephrasing?",
+                "response_type": "clarification"
+            }
+
+# =============================================================================
+# NODE 2: INFORMATION GATHERER
+# =============================================================================
+
+class InformationGatherer:
+    """
+    Handles collecting missing information through natural conversation
+    """
     
-    if state["needs_clarification"]:
-        return "clarification_node"
+    def __call__(self, state: AgentState) -> Dict[str, Any]:
+        """Gather next piece of missing information"""
+        
+        missing_params = state.get("missing_params", [])
+        intended_action = state.get("intended_action")
+        
+        if not missing_params:
+            # All info collected, move to confirmation
+            return {
+                "current_state": ConversationState.CONFIRMING,
+                "missing_params": []
+            }
+        
+        # Get next parameter to collect
+        next_param = missing_params[0]
+        prompt = self._generate_parameter_prompt(next_param, intended_action, state)
+        
+        return {
+            "current_state": ConversationState.GATHERING_INFO,
+            "bot_response": prompt,
+            "response_type": "question",
+            "suggested_actions": self._get_quick_options(next_param, state)
+        }
     
-    return "response_formatter_node"
-
-def route_after_error(state: AgentState) -> str:
-    """Route after error handling"""
-    if state["node_status"] == NodeStatus.RETRY:
-        # Return to the capability node that failed
-        return state["detected_capability"] + "_node"
+    def _generate_parameter_prompt(self, param: str, action: str, state: AgentState) -> str:
+        """Generate contextual prompt for specific parameter"""
+        
+        prompts = {
+            "name": "What would you like to name this experiment?",
+            "context": f"Which app context? Available: {', '.join(state.get('context_metadata', {}).keys())}",
+            "experiment_id": "Which experiment? " + self._format_experiment_options(state),
+            "num_users": "How many users should I simulate? (default: 100)",
+            "concept": "What concept would you like me to explain?"
+        }
+        
+        return prompts.get(param, f"Please provide {param}:")
     
-    return "response_formatter_node"
-```
+    def process_user_response(self, state: AgentState) -> Dict[str, Any]:
+        """Process user's response to information request"""
+        
+        user_input = state["user_input"]
+        missing_params = state.get("missing_params", [])
+        
+        if not missing_params:
+            return {"current_state": ConversationState.CONFIRMING}
+        
+        current_param = missing_params[0]
+        
+        # Handle cancellation
+        if user_input.lower() in ["cancel", "stop", "nevermind"]:
+            return {
+                "current_state": ConversationState.RESPONDING,
+                "bot_response": "No problem! What else can I help you with?",
+                "response_type": "answer"
+            }
+        
+        # Extract value (simplified - in real implementation, use LLM)
+        extracted_value = self._extract_parameter_value(current_param, user_input, state)
+        
+        if extracted_value:
+            # Add to gathered params
+            gathered = state.get("gathered_params", {})
+            gathered[current_param] = extracted_value
+            remaining_missing = missing_params[1:]
+            
+            return {
+                "gathered_params": gathered,
+                "missing_params": remaining_missing,
+                "current_state": ConversationState.GATHERING_INFO if remaining_missing else ConversationState.CONFIRMING
+            }
+        
+        else:
+            # Couldn't understand, ask again
+            return {
+                "bot_response": f"I didn't understand that. {self._generate_parameter_prompt(current_param, state.get('intended_action'), state)}",
+                "response_type": "question"
+            }
 
-## Multi-Step Operation Patterns
+# =============================================================================
+# NODE 3: CONFIRMATION HANDLER
+# =============================================================================
 
-### Pattern 1: Simple Request-Response
-```
-User Input → Router → Capability Node → Response Formatter → End
-```
-Examples: Version check, terminology explanations, experiment listing
-
-### Pattern 2: Validation Required
-```
-User Input → Router → Capability Node → Validation → Response Formatter → End
-                                    ↓ (if validation fails)
-                               Clarification Node ↑
-```
-Examples: Creating experiments, user simulation with missing parameters
-
-### Pattern 3: Multi-Step Process
-```
-User Input → Router → Capability Node (Step 1) → ... → Capability Node (Step N) → Response Formatter → End
-```
-Examples: Condition balance testing, consistency rule testing
-
-### Pattern 4: Error Recovery
-```
-Any Node → Error Handler → Retry (if possible) → Original Node
-                      ↓ (if not retryable)
-                 Response Formatter → End
-```
-
-## State Management Patterns
-
-### Cache Management
-```python
-def update_experiment_cache(state: AgentState, experiment_data: Dict) -> AgentState:
-    """Update cached experiment data to avoid repeated API calls"""
-    if not state["all_experiments"]:
-        state["all_experiments"] = []
+class ConfirmationHandler:
+    """
+    Handles user confirmation before executing actions
+    """
     
-    # Update or add experiment data
-    existing_ids = {exp["id"] for exp in state["all_experiments"]}
-    if experiment_data["id"] not in existing_ids:
-        state["all_experiments"].append(experiment_data)
+    def __call__(self, state: AgentState) -> Dict[str, Any]:
+        """Generate confirmation message or process confirmation response"""
+        
+        if state.get("current_state") == ConversationState.CONFIRMING:
+            # Generate confirmation
+            return self._generate_confirmation(state)
+        else:
+            # Process user's confirmation response
+            return self._process_confirmation_response(state)
     
-    return state
-```
+    def _generate_confirmation(self, state: AgentState) -> Dict[str, Any]:
+        """Generate confirmation message"""
+        
+        action = state.get("intended_action")
+        params = state.get("gathered_params", {})
+        
+        if action == "create_experiment":
+            confirmation = f"""
+Ready to create experiment:
 
-### Multi-Step Progress Tracking
-```python
-def init_multi_step_operation(state: AgentState, total_steps: int) -> AgentState:
-    """Initialize multi-step operation tracking"""
-    state["step_counter"] = 0
-    state["total_steps"] = total_steps
-    state["step_results"] = []
-    return state
+**Name**: {params.get('name')}
+**Context**: {params.get('context')}
+**Conditions**: {params.get('conditions', 'control 50%, variant 50%')}
 
-def advance_step(state: AgentState, step_result: Dict) -> AgentState:
-    """Advance to next step and record result"""
-    state["step_counter"] += 1
-    state["step_results"].append(step_result)
-    return state
-```
+Proceed?
+"""
+        elif action == "test_condition_balance":
+            confirmation = f"""
+Ready to test condition balance:
 
-## Error Handling Strategy
+**Experiment**: {params.get('experiment_id')}
+**Users to simulate**: {params.get('num_users', 100)}
 
-### Error Types and Responses
-
-1. **API Errors**:
-   - Network timeouts → Retry with exponential backoff
-   - 500/502/503 errors → Retry up to 3 times
-   - 404 errors → Inform user, suggest alternatives
-   - 401/403 errors → Check authentication, inform user
-
-2. **Validation Errors**:
-   - Invalid experiment parameters → Explain what's wrong, suggest fixes
-   - Unsupported features → Explain limitations, suggest alternatives
-   - Missing required data → Ask for missing information
-
-3. **User Input Errors**:
-   - Typos in experiment names → Suggest similar names
-   - Ambiguous references → Ask for clarification
-   - Missing context → Guide user to provide needed info
-
-### Retry Logic
-```python
-def should_retry_error(error_type: str, retry_count: int) -> bool:
-    """Determine if error should be retried"""
-    if retry_count >= 3:
-        return False
+This will temporarily set the experiment to 'enrolling' status. Proceed?
+"""
+        else:
+            confirmation = f"Ready to execute {action} with parameters: {params}. Proceed?"
+        
+        return {
+            "current_state": ConversationState.CONFIRMING,
+            "bot_response": confirmation,
+            "response_type": "confirmation",
+            "suggested_actions": ["Yes", "No", "Modify"]
+        }
     
-    retryable_errors = ["network", "timeout", "api_500", "api_502", "api_503"]
-    return error_type in retryable_errors
-```
+    def _process_confirmation_response(self, state: AgentState) -> Dict[str, Any]:
+        """Process user's confirmation response"""
+        
+        user_input = state["user_input"].lower()
+        
+        if any(word in user_input for word in ["yes", "confirm", "proceed", "go ahead"]):
+            # User confirmed - execute
+            return {
+                "current_state": ConversationState.EXECUTING
+            }
+        
+        elif any(word in user_input for word in ["no", "cancel", "abort"]):
+            # User cancelled
+            return {
+                "current_state": ConversationState.RESPONDING,
+                "bot_response": "Cancelled. What else can I help you with?",
+                "response_type": "answer"
+            }
+        
+        else:
+            # Unclear response
+            return {
+                "bot_response": "Please confirm with 'yes' to proceed or 'no' to cancel.",
+                "response_type": "confirmation"
+            }
 
-## Graph Definition
+# =============================================================================
+# NODE 4: TOOL EXECUTOR
+# =============================================================================
 
-```python
+class ToolExecutor:
+    """
+    Executes the planned tools and handles results
+    """
+    
+    def __init__(self, tools: List):
+        self.tools = {tool.name: tool for tool in tools}
+    
+    def __call__(self, state: AgentState) -> Dict[str, Any]:
+        """Execute planned tools"""
+        
+        planned_tools = state.get("planned_tools", [])
+        
+        if not planned_tools:
+            return {
+                "current_state": ConversationState.RESPONDING,
+                "bot_response": "No tools to execute.",
+                "response_type": "answer"
+            }
+        
+        # Execute tools
+        results = []
+        for tool_plan in planned_tools:
+            try:
+                tool_name = tool_plan["tool"]
+                tool_params = tool_plan["params"]
+                
+                if tool_name in self.tools:
+                    result = self.tools[tool_name].invoke(tool_params)
+                    results.append({"tool": tool_name, "success": True, "result": result})
+                else:
+                    results.append({"tool": tool_name, "success": False, "error": f"Tool {tool_name} not found"})
+            
+            except Exception as e:
+                results.append({"tool": tool_name, "success": False, "error": str(e)})
+        
+        return {
+            "current_state": ConversationState.RESPONDING,
+            "tool_results": results
+        }
+
+# =============================================================================
+# NODE 5: RESPONSE GENERATOR
+# =============================================================================
+
+class ResponseGenerator:
+    """
+    Generates final responses based on conversation state and tool results
+    """
+    
+    def __init__(self):
+        self.llm = ChatAnthropic(model="claude-3-5-sonnet-20241022")
+    
+    def __call__(self, state: AgentState) -> Dict[str, Any]:
+        """Generate final response"""
+        
+        # If response already set, return as-is
+        if state.get("bot_response"):
+            return {"bot_response": state["bot_response"]}
+        
+        # Generate response based on tool results
+        tool_results = state.get("tool_results", [])
+        
+        if tool_results:
+            return self._synthesize_tool_response(state, tool_results)
+        
+        # Fallback response
+        return {
+            "bot_response": "I'm not sure how to help with that. Could you please rephrase your question?",
+            "response_type": "answer"
+        }
+    
+    def _synthesize_tool_response(self, state: AgentState, tool_results: List) -> Dict[str, Any]:
+        """Synthesize natural response from tool results"""
+        
+        successful_results = [r for r in tool_results if r.get("success")]
+        
+        if not successful_results:
+            return {
+                "bot_response": "I encountered an error while processing your request. Please try again.",
+                "response_type": "answer"
+            }
+        
+        # Use LLM to create natural response
+        synthesis_prompt = f"""
+        The user asked: "{state['user_input']}"
+        
+        Tool execution results: {json.dumps(successful_results, indent=2)}
+        
+        Create a helpful, natural response that addresses the user's request using these results.
+        Be concise but informative.
+        """
+        
+        response = self.llm.invoke(synthesis_prompt)
+        
+        return {
+            "bot_response": response.content,
+            "response_type": "answer"
+        }
+
+# =============================================================================
+# GRAPH CONSTRUCTION
+# =============================================================================
+
 from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.memory import InMemorySaver
 
-def create_upgrade_agent_graph():
-    """Create the complete UpGradeAgent graph"""
+def build_streamlined_upgrade_agent(tools: List):
+    """Build the streamlined UpGradeAgent graph"""
     
+    # Initialize components
+    analyzer = ConversationAnalyzer()
+    gatherer = InformationGatherer()
+    confirmer = ConfirmationHandler()
+    executor = ToolExecutor(tools)
+    responder = ResponseGenerator()
+    
+    # Create graph
     graph = StateGraph(AgentState)
     
     # Add nodes
-    graph.add_node("input_router", input_router)
-    graph.add_node("terminology_node", terminology_node)
-    graph.add_node("version_check_node", version_check_node)
-    graph.add_node("experiment_listing_node", experiment_listing_node)
-    graph.add_node("experiment_details_node", experiment_details_node)
-    graph.add_node("experiment_management_node", experiment_management_node)
-    graph.add_node("user_simulation_node", user_simulation_node)
-    graph.add_node("testing_node", testing_node)
-    graph.add_node("clarification_node", clarification_node)
-    graph.add_node("error_handler_node", error_handler_node)
-    graph.add_node("response_formatter_node", response_formatter_node)
+    graph.add_node("analyzer", analyzer)
+    graph.add_node("gatherer", gatherer)
+    graph.add_node("confirmer", confirmer)
+    graph.add_node("executor", executor)
+    graph.add_node("responder", responder)
     
-    # Define entry point
-    graph.set_entry_point("input_router")
+    # Define routing
+    def route_from_analyzer(state: AgentState) -> str:
+        current_state = state.get("current_state")
+        
+        if current_state == ConversationState.GATHERING_INFO:
+            return "gatherer"
+        elif current_state == ConversationState.CONFIRMING:
+            return "confirmer"
+        elif current_state == ConversationState.EXECUTING:
+            return "executor"
+        else:  # RESPONDING
+            return "responder"
     
-    # Add conditional edges
-    graph.add_conditional_edges(
-        "input_router",
-        route_after_input,
-        {
-            "terminology_node": "terminology_node",
-            "version_check_node": "version_check_node",
-            "experiment_listing_node": "experiment_listing_node",
-            "experiment_details_node": "experiment_details_node",
-            "experiment_management_node": "experiment_management_node",
-            "user_simulation_node": "user_simulation_node",
-            "testing_node": "testing_node",
-            "clarification_node": "clarification_node",
-            "error_handler_node": "error_handler_node"
-        }
-    )
+    def route_from_gatherer(state: AgentState) -> str:
+        current_state = state.get("current_state")
+        
+        if current_state == ConversationState.CONFIRMING:
+            return "confirmer"
+        else:
+            return END  # Wait for user input
     
-    # Add edges from capability nodes
-    capability_nodes = [
-        "terminology_node", "version_check_node", "experiment_listing_node",
-        "experiment_details_node", "experiment_management_node", 
-        "user_simulation_node", "testing_node"
-    ]
+    def route_from_confirmer(state: AgentState) -> str:
+        current_state = state.get("current_state")
+        
+        if current_state == ConversationState.EXECUTING:
+            return "executor"
+        else:
+            return END  # Wait for user confirmation or return response
     
-    for node in capability_nodes:
-        graph.add_conditional_edges(
-            node,
-            route_after_capability,
-            {
-                "clarification_node": "clarification_node",
-                "error_handler_node": "error_handler_node",
-                "response_formatter_node": "response_formatter_node"
-            }
-        )
+    # Set up edges
+    graph.set_entry_point("analyzer")
     
-    # Add edges from support nodes
-    graph.add_conditional_edges(
-        "error_handler_node",
-        route_after_error,
-        {
-            # Dynamic routing back to failed nodes
-            "terminology_node": "terminology_node",
-            "version_check_node": "version_check_node",
-            "experiment_listing_node": "experiment_listing_node",
-            "experiment_details_node": "experiment_details_node",
-            "experiment_management_node": "experiment_management_node",
-            "user_simulation_node": "user_simulation_node", 
-            "testing_node": "testing_node",
-            "response_formatter_node": "response_formatter_node"
-        }
-    )
+    graph.add_conditional_edges("analyzer", route_from_analyzer)
+    graph.add_conditional_edges("gatherer", route_from_gatherer)
+    graph.add_conditional_edges("confirmer", route_from_confirmer)
+    graph.add_edge("executor", "responder")
+    graph.add_edge("responder", END)
     
-    graph.add_edge("clarification_node", "input_router")  # Loop back for re-routing
-    graph.add_edge("response_formatter_node", END)
+    # Add memory
+    memory = InMemorySaver()
     
-    return graph.compile()
-```
+    return graph.compile(checkpointer=memory)
 
-## Usage Example
+# =============================================================================
+# EXAMPLE USAGE
+# =============================================================================
 
-```python
-# Initialize the graph
-app = create_upgrade_agent_graph()
+# Initialize with UpGrade tools
+app = build_streamlined_upgrade_agent([
+    check_upgrade_health,
+    get_all_experiments,
+    create_experiment,
+    test_condition_balance,
+    # ... other tools
+])
 
-# Run a conversation
-initial_state = {
-    "user_input": "Test condition balance for My Experiment with 100 users",
-    "bot_response": "",
-    "conversation_history": [],
-    "retry_count": 0,
-    "max_retries": 3,
-    "node_status": NodeStatus.SUCCESS,
-    "step_counter": 0,
-    "needs_clarification": False
-}
-
-# Execute the graph
-final_state = app.invoke(initial_state)
-print(final_state["bot_response"])
-```
-
-## Development and Testing
-
-### Unit Testing Nodes
-```python
-def test_terminology_node():
-    """Test terminology explanation functionality"""
-    state = AgentState(
-        user_input="What is app context?",
-        detected_capability="terminology"
-    )
+def chat_example():
+    """Example conversation"""
+    config = {"configurable": {"thread_id": "user-1"}}
     
-    result = terminology_node(state)
-    assert "App Context" in result["bot_response"]
-    assert result["node_status"] == NodeStatus.SUCCESS
-```
-
-### Integration Testing
-```python
-def test_full_workflow():
-    """Test complete user interaction workflow"""
-    app = create_upgrade_agent_graph()
+    # Example 1: Greeting
+    result = app.invoke({
+        "user_input": "Hi, how are you?",
+        "conversation_history": [],
+        "current_state": ConversationState.ANALYZING
+    }, config=config)
     
-    state = {"user_input": "List all experiments in assign-prog context"}
-    result = app.invoke(state)
+    print("Bot:", result["bot_response"])
+    # Expected: "Hello! I'm doing well, thank you. I'm here to help you with UpGrade A/B testing..."
     
-    assert result["detected_capability"] == "list_experiments"
-    assert "experiments" in result["bot_response"].lower()
-```
+    # Example 2: General question
+    result = app.invoke({
+        "user_input": "What is A/B testing?",
+        "current_state": ConversationState.ANALYZING
+    }, config=config)
+    
+    print("Bot:", result["bot_response"])
+    # Expected: Direct explanation of A/B testing
+    
+    # Example 3: UpGrade-specific action
+    result = app.invoke({
+        "user_input": "Create a new experiment",
+        "current_state": ConversationState.ANALYZING
+    }, config=config)
+    
+    print("Bot:", result["bot_response"])
+    # Expected: "What would you like to name this experiment?"
