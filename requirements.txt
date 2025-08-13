@@ -1,0 +1,9 @@
+python-dotenv==1.0.1
+anthropic==0.41.0
+langgraph==0.2.60
+langchain==0.3.14
+langchain-anthropic==0.3.2
+requests==2.32.3
+aiohttp==3.10.5
+google-auth==2.35.0
+google-auth-httplib2==0.2.0
