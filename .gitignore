@@ -134,8 +134,5 @@ dmypy.json
 # Security/Credentials
 *.pem
 
-# Generated documentation
-COMPILED_README.md
-
 # UpGrade service account key file
 service-account-file.json

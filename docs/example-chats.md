@@ -1,483 +1,529 @@
-## Example Bot Interactions
+# Example Bot Interactions - Streamlined Architecture
 
-### Explain Terms and Concepts - Answer questions about UpGrade terminology and concepts
+These examples demonstrate how the streamlined 5-node architecture handles different types of user interactions naturally and intelligently.
 
+## 1. Greeting and General Questions
+
+### Simple Greeting
 ```
-User: What is an app context?
+User: Hi, how are you?
 
-Bot: (Calls `explain_upgrade_concept` with concept="app context")
+Bot: Hello! I'm doing well, thank you. I'm UpGradeAgent, your assistant for A/B testing with UpGrade. I can help you with:
 
-**App Context** refers to where your experiment will run - essentially the name of your client application that's known to UpGrade.
+- Creating and managing experiments
+- Explaining A/B testing concepts
+- Testing experiment configurations
+- Simulating user interactions
+- Checking system health
 
-**Detailed Explanation:**
-App Context indicates the specific application environment where experiments are deployed. Each context has its own set of supported conditions, group types, decision points, and other configuration options. This ensures that experiments are only created with valid settings for that particular application.
-
-**Examples:**
-- `assign-prog`: Assignment progress service in MATHia application
-- `mathstream`: MATHstream application
-- `livehint-ai`: LiveHint AI application
-
-**Related Concepts:**
-- **Decision Point**: Locations within your app context where experiments run
-- **Conditions**: Treatment options available for your app context
-- **Group Types**: Ways to organize users within your app context
-
-**Usage:** You specify the app context when creating experiments, and UpGrade validates all your experiment settings against what's supported in that context.
+What would you like to work on today?
 ```
 
+### General A/B Testing Question
 ```
-User: Can you explain decision points?
+User: What is A/B testing?
 
-Bot: (Calls `explain_upgrade_concept` with concept="decision point")
+Bot: A/B testing is a method of comparing two or more versions of something (like a webpage, feature, or interface) to see which performs better. Here's how it works:
 
-**Decision Point** is a specific location in your application where an experimental condition needs to be determined.
+**Basic Concept:**
+- Show different versions to different groups of users
+- Measure which version achieves your goal better
+- Make decisions based on data, not assumptions
 
-**Detailed Explanation:**
-A decision point consists of two parts:
-- **Site**: A category of locations within your app (like a page or function)
-- **Target**: A specific element within that category (like a button or content piece)
+**In UpGrade Context:**
+- You create **experiments** with different **conditions** (versions)
+- Users visit **decision points** in your app and get assigned conditions
+- You analyze results to see which condition works best
 
-Think of it as coordinates that pinpoint exactly where in your application the experiment should trigger.
+**Example:** Testing two button colors - 50% of users see blue buttons (control), 50% see green buttons (variant). After collecting data, you can see which color leads to more clicks.
 
-**Examples:**
-- Site: "SelectSection", Target: "absolute_value_plot_equality"
-  → When users select the absolute value section, determine which version to show
-- Site: "lesson-stream", Target: "question-hint"
-  → When users encounter question hints in lessons, determine which hint style to use
-- Site: "problem-info", Target: "digital"
-  → When displaying problem information for digital content, determine the interface version
-
-**Related Concepts:**
-- **Payload**: The actual data delivered at a decision point
-- **Condition**: Which experimental treatment is assigned at the decision point
-- **Site and Target**: The two components that make up a decision point
-
-**Usage:** You define decision points when creating experiments, and your application calls UpGrade when users reach these points to get their assigned conditions.
+Would you like me to explain any specific A/B testing concepts or help you create an experiment?
 ```
 
-### Version Check - Call health endpoint and return version info
+## 2. Ambiguous Query Handling
 
+### "What's the status?" - Ambiguous Query
 ```
-User: What's the current version of UpGrade?
+User: What's the status?
 
-Bot: I'll check the current version of UpGrade for you.
+Bot: I need clarification on what status you're asking about. Your question could mean:
 
-(Calls `check_upgrade_health`)
+1. **UpGrade service health status** - Check if the system is running
+2. **Status of your experiments** - See which experiments are active/inactive
+3. **Explanation of "status" concept** - Learn what experiment status means in UpGrade
 
-The current UpGrade version is **6.2.0** (A/B Testing Backend).
+Which one would you like to know about?
+
+[Service Health] [My Experiments] [Explain Status Concept]
 ```
 
 ```
-User: Is the UpGrade service running?
+User: Service health
 
-Bot: Let me check the health status of the UpGrade service.
+Bot: I'll check the UpGrade service health for you.
 
-(Calls `check_upgrade_health`)
+✓ **UpGrade Service Status: Healthy**
 
-Yes, the UpGrade service is running! Here are the details:
 - **Name**: A/B Testing Backend
 - **Version**: 6.2.0
-- **Description**: Backend for A/B Testing Project
-- **Status**: Healthy ✅
+- **Response Time**: 45ms
+- **Status**: All systems operational
+
+The service is running normally and ready to handle your experiments.
 ```
 
-### List Experiments - Query experiments by context or date filters
-
+### Follow-up in Context
 ```
-User: Can you list all experiments?
+User: What about my experiments?
 
-Bot: I'll retrieve all defined experiments for you.
+Bot: Here are your current experiments:
 
-(Calls `get_all_experiments`)
+**Active Experiments (Enrolling):**
+1. **Homepage Redesign Test** - assign-prog context
+   - 1,247 users enrolled
+   - Running for 5 days
 
-Here are all the experiments currently defined:
+**Inactive Experiments:**
+2. **Button Color Study** - assign-prog context  
+3. **Math Hint Interface** - mathstream context
 
-1. **My Experiment** (ID: `6dfd6369-38e2-46a1-a1ac-5b9d77254969`)
-   - Context: assign-prog
-   - Status: inactive
-   - Type: Simple
-   - Created: 2025-08-10T10:54:44.686Z
+**Summary:** 1 experiment actively enrolling users, 2 ready to start
 
-2. **Math Hint Study** (ID: `abc123-def456`)
-   - Context: mathstream
-   - Status: enrolling
-   - Type: Simple
-   - Created: 2025-08-09T14:30:22.123Z
+Would you like details on any specific experiment or help with starting/stopping experiments?
 
-**Total**: 2 experiments found.
+[View Homepage Test Details] [Start Button Color Study] [Create New Experiment]
 ```
 
+## 3. Progressive Information Gathering
+
+### Creating an Experiment - Missing Information
 ```
-User: Show me experiments in the "mathstream" context
+User: Create a new experiment
 
-Bot: I'll filter experiments by the "mathstream" context.
+Bot: I'll help you create a new experiment. Let me gather the required information.
 
-(Calls `get_all_experiments` with context_filter="mathstream")
+What would you like to name this experiment?
 
-Here are all experiments in the **mathstream** context:
+💡 *Choose a descriptive name like 'Login Flow Test Q4 2025'*
 
-1. **Question Hint Experiment**
-   - Status: enrolling
-   - Assignment Unit: individual
-   - Consistency Rule: individual
-   - Conditions: question-hint-default, question-hint-tutorbot
-   - Decision Point: lesson-stream / question-hint
-
-2. **Adaptive Learning Study**
-   - Status: inactive
-   - Assignment Unit: group (classId)
-   - Consistency Rule: group
-   - Conditions: control, adaptive-v1, adaptive-v2
-
-**Found**: 2 experiments in the "mathstream" context.
+[Cancel anytime by typing 'cancel']
 ```
 
 ```
-User: Are there any experiments created today?
+User: Dashboard Layout Test
 
-Bot: Let me check for experiments created today (2025-08-11).
+Bot: Great name! Which app context should this experiment run in?
 
-(Calls `get_all_experiments` with date_filter="today")
+**Available contexts:**
+- **assign-prog** - Assignment progress features
+- **mathstream** - Math streaming application  
+- **livehint-ai** - AI hint system
 
-I found **1 experiment** created today:
+💡 *Context determines where your experiment runs and what options are available*
 
-**New Math Intervention** - Created at 2025-08-11T09:15:33.456Z
-- Context: assign-prog
-- Status: inactive
-- Currently being configured for testing
-
-All other experiments were created on previous dates.
+[assign-prog] [mathstream] [livehint-ai]
 ```
 
-### Experiment Details - Fetch and explain experiment design details
-
 ```
-User: Please show me the details of experiment "My Experiment"
+User: assign-prog
 
-Bot: I'll fetch the detailed configuration for "My Experiment".
+Bot: Perfect! Now I need to know which decision point this experiment should target.
 
-(Calls `get_experiment_names` to find experiment, then `get_experiment_details` with experiment_id="6dfd6369-38e2-46a1-a1ac-5b9d77254969")
-
-Here are the complete details for **My Experiment**:
-
-**Basic Configuration:**
-- **ID**: `6dfd6369-38e2-46a1-a1ac-5b9d77254969`
-- **Context**: assign-prog
-- **Status**: inactive
-- **Type**: Simple Experiment
-- **Assignment Unit**: individual
-- **Consistency Rule**: individual
-- **Assignment Algorithm**: random
-- **Post Experiment Rule**: continue
-
-**Decision Points:**
+**Available for assign-prog:**
 - **Site**: SelectSection
-- **Target**: absolute_value_plot_equality
+- **Targets**: absolute_value_plot_equality, analyzing_step_functions
 
-**Conditions:**
-1. **control** (50% weight)
-   - Payload: "control" (string)
+Please specify like: "SelectSection / absolute_value_plot_equality"
 
-2. **variant** (50% weight)
-   - Payload: "variant" (string)
-
-**Participants:**
-- **Filter Mode**: excludeAll
-- **Inclusion**: test_user
-- **Exclusion**: (none)
-
-**Metrics:**
-- Duration Seconds (Mean)
-
-The experiment is currently **inactive**, so all users receive the default condition.
+💡 *Decision points are where users will see different experiment conditions*
 ```
 
 ```
-User: What decision points and conditions are defined in the experiment with ID abc123?
+User: SelectSection / absolute_value_plot_equality
 
-Bot: I'll look up the experiment configuration for ID `abc123`.
+Bot: Excellent! One more thing - what conditions would you like?
 
-(Calls `get_experiment_details` with experiment_id="abc123")
+**Default**: control (50%), variant (50%)
+**Or specify**: like "control 30%, variant 70%" or "A 33%, B 33%, C 34%"
 
-Here's the configuration for experiment ID `abc123`:
+💡 *Condition weights must sum to 100%*
 
-**Decision Points:**
-1. **Site**: problem-info, **Target**: digital
-2. **Site**: create-session, **Target**: mathbook_tx
-
-**Conditions:**
-1. **solver_bot_with_goal** (50% assignment weight)
-   - Payload: `{"type": "string", "value": "solver_goal_enabled"}`
-2. **solver_bot_without_goal** (50% assignment weight)
-   - Payload: `{"type": "string", "value": "solver_basic"}`
-```
-
-### Create/Update/Delete Experiment - Create and modify experiments
-
-```
-User: Create a simple A/B test for the assign-prog context
-
-Bot: I'll help you create a simple A/B test experiment for the assign-prog context. Let me first check what's available in that context.
-
-(Calls `get_context_metadata`)
-
-**Creating A/B Test for assign-prog:**
-
-I need a few details to set up your experiment:
-
-1. **Experiment Name**: What would you like to call this experiment?
-2. **Decision Point**: Which decision point should this test?
-   - **Available sites**: SelectSection
-   - **Available targets**: absolute_value_plot_equality, analyzing_step_functions
-
-3. **Conditions**: I can set up the standard conditions for assign-prog:
-   - control (50%)
-   - variant (50%)
-
-4. **Assignment**: Should this be individual assignment or group-based?
-
-Please provide the experiment name and decision point, and I'll create the experiment for you!
+[Use Default 50/50] [Use 70/30] [Custom Split]
 ```
 
 ```
-User: Name it "Math Problem Interface Test", use SelectSection/absolute_value_plot_equality, individual assignment
+User: Use 70/30
 
-Bot: Perfect! Creating your experiment now...
+Bot: ## Ready to Create Experiment
 
-(Calls `create_experiment` with name="Math Problem Interface Test", context="assign-prog", assignment_unit="individual", decision_points=[{"site": "SelectSection", "target": "absolute_value_plot_equality"}])
-
-✓ **Experiment Created Successfully!**
-
-**Math Problem Interface Test** (ID: `abc-123-def`)
+**Dashboard Layout Test**
 - **Context**: assign-prog
-- **Status**: inactive (ready to configure)
-- **Assignment**: Individual users get random conditions
 - **Decision Point**: SelectSection / absolute_value_plot_equality
+- **Conditions**: control (30%), variant (70%)
+- **Assignment**: Individual randomization
+- **Status**: Will start as inactive
 
-**Conditions**:
-- **control** (50% weight) → Payload: "control"
-- **variant** (50% weight) → Payload: "variant"
+**This means:**
+- Each user gets randomly assigned to control (30% chance) or variant (70% chance)
+- Experiment starts inactive (no users enrolled until you start it)
+- You can add specific users or modify settings after creation
 
-**Next Steps**:
-- The experiment is inactive, so users get the default condition
-- To start testing: "Start the experiment Math Problem Interface Test"
-- To test balance: "Test condition balance for this experiment"
+**Proceed with creation?**
 
-Your experiment is ready to go!
+[Create Experiment] [Modify Settings] [Cancel]
 ```
 
 ```
-User: Update the Math Problem Interface Test to give 70% to variant and 30% to control
+User: Create experiment
 
-Bot: I'll update the condition weights for "Math Problem Interface Test".
+Bot: ✓ **Experiment Created Successfully!**
 
-(Calls `get_experiment_details` to find experiment, then `update_experiment` with updated condition weights)
+**Dashboard Layout Test** (ID: `def789-abc123`)
+- Status: Inactive
+- Context: assign-prog
+- Conditions: control (30%), variant (70%)
 
-✓ **Experiment Updated Successfully!**
+**Next Steps:**
+- Add participants: "Add users to Dashboard Layout Test"  
+- Test configuration: "Test condition balance with 100 users"
+- Start experiment: "Start Dashboard Layout Test"
 
-**Changes Made**:
-- control: 50% → **30%**
-- variant: 50% → **70%**
+What would you like to do next?
 
-**Updated Configuration**:
-- **control** (30% weight) → More users will see the original interface
-- **variant** (70% weight) → Most users will see the new interface
+[Add Users] [Test Balance] [Start Experiment] [View Details]
+```
 
-**Current Status**: inactive
-- Users are still getting the default condition
-- New weights will apply when you start the experiment
+## 4. Context-Aware Follow-ups
 
-Would you like me to start the experiment now, or make any other changes?
+### Building on Previous Context
+```
+User: Test the balance
+
+Bot: I'll test the condition balance for 'Dashboard Layout Test' that we just created.
+
+How many users should I simulate?
+
+**Recommended:**
+- **100 users** - Quick test (2-3 seconds)
+- **500 users** - Better statistical confidence
+- **1000 users** - High confidence for production
+
+💡 *More users give more accurate balance verification*
+
+[100] [500] [1000] [Custom Number]
 ```
 
 ```
-User: Start the Math Problem Interface Test experiment
+User: 500
 
-Bot: Starting the "Math Problem Interface Test" experiment...
+Bot: ## Balance Test Configuration
 
-(Calls `update_experiment_status` with experiment_id="abc-123-def", new_status="enrolling")
+**Experiment**: Dashboard Layout Test
+**Users to simulate**: 500
+**Expected results**: ~150 control (30%), ~350 variant (70%)
 
-✓ **Experiment Started!**
+**This test will:**
+1. Temporarily set experiment to 'enrolling'
+2. Simulate 500 user visits
+3. Analyze condition distribution  
+4. Return experiment to 'inactive'
 
-**Status Changed**: inactive → **enrolling**
+**Proceed with balance test?**
 
-**What This Means**:
-- New users visiting SelectSection/absolute_value_plot_equality will now get experimental conditions
-- 30% will get "control" (original interface)
-- 70% will get "variant" (new interface)
-- Users who visited during inactive phase will continue getting "default" (consistency rule)
-
-**Monitoring**:
-- Users are now being enrolled in real-time
-- You can check "Test condition balance" anytime to see distribution
-- Use "Stop experiment" when you want to end enrollment
-
-Experiment is now live! 🚀
+[Run Test] [Change User Count] [Cancel]
 ```
 
 ```
-User: Delete the test experiment we just created
+User: Run test
 
-Bot: I'll delete the "Math Problem Interface Test" experiment for you.
+Bot: 🔄 **Running Balance Test...**
 
-⚠️ **Confirmation Required**
-- **Experiment**: Math Problem Interface Test (`abc-123-def`)
-- **Current Status**: enrolling
-- **This action cannot be undone**
+✓ **Balance Test Complete!**
 
-Are you sure you want to delete this experiment? Type "yes" to confirm.
-```
-
-```
-User: yes
-
-Bot: (Calls `delete_experiment` with experiment_id="abc-123-def")
-
-✓ **Experiment Deleted Successfully**
-
-**Removed**: Math Problem Interface Test
-- Experiment configuration deleted
-- All associated data cleaned up
-- Users will no longer be enrolled
-
-The experiment has been completely removed from UpGrade.
-```
-
-### Visit Decision Point - Have users visit a decision point
-
-```
-User: Can you simulate user "student123" visiting the decision point "SelectSection / absolute_value_plot_equality"?
-
-Bot: I'll simulate user "student123" visiting that decision point. First, let me initialize the user and then have them visit the decision point.
-
-(Calls `initialize_user` with user_id="student123", context="assign-prog")
-✓ User `student123` initialized successfully.
-
-(Calls `get_user_assignments` with user_id="student123", context="assign-prog")
-✓ Retrieved experiment conditions for user `student123`.
-
-**Assignment Results:**
-- **Experiment**: My Experiment
-- **Decision Point**: SelectSection / absolute_value_plot_equality
-- **Assigned Condition**: **variant**
-- **Payload**: "variant"
-
-(Calls `mark_decision_point_visit` with user_id="student123", site="SelectSection", target="absolute_value_plot_equality")
-✓ Decision point visit recorded successfully.
-
-**Summary:** User `student123` was assigned to the "variant" condition and the visit has been successfully marked.
-```
-
-```
-User: Initialize user "teacher456" with school "school_A" and class "math_101", then have them visit "lesson-stream / question-hint"
-
-Bot: I'll initialize `teacher456` with the specified group memberships and simulate their decision point visit.
-
-**Step 1: User Initialization**
-(Calls `initialize_user` with user_id="teacher456", context="mathstream", group_memberships={"schoolId": ["school_A"], "classId": ["math_101"]}, working_group={"schoolId": "school_A", "classId": "math_101"})
-
-✓ User `teacher456` initialized with:
-- **School**: school_A
-- **Class**: math_101
-
-**Step 2: Decision Point Visit**
-(Calls `get_user_assignments` with user_id="teacher456", context="mathstream")
-✓ Assignment retrieved:
-- **Decision Point**: lesson-stream / question-hint
-- **Assigned Condition**: question-hint-tutorbot
-- **Payload**: "tutorbot_enabled"
-
-**Step 3: Record Visit**
-(Calls `mark_decision_point_visit` with user_id="teacher456", site="lesson-stream", target="question-hint")
-✓ Visit recorded successfully.
-
-User `teacher456` will see the tutorbot-enabled version of question hints in their lesson stream.
-```
-
-### Condition Balance Testing - Enroll users and analyze condition distribution
-
-```
-User: Can you test the condition balance for "My Experiment" by enrolling 100 users?
-
-Bot: I'll test the condition balance by simulating 100 user enrollments for "My Experiment". Let me first ensure the experiment is in "enrolling" status.
-
-**Step 1: Check Experiment Status**
-(Calls `get_experiment_details` with experiment_id="6dfd6369-38e2-46a1-a1ac-5b9d77254969")
-
-Current status: **inactive**
-
-**Step 2: Update to Enrolling Status**
-(Calls `update_experiment_status` with experiment_id="6dfd6369-38e2-46a1-a1ac-5b9d77254969", new_status="enrolling")
-✓ Experiment status changed to "enrolling"
-
-**Step 3: Simulate User Enrollments**
-(Calls `test_condition_balance` with experiment_id="6dfd6369-38e2-46a1-a1ac-5b9d77254969", num_users=100)
-
-**Condition Distribution Results:**
-- **control**: 48 users (48%) | Expected: 50% | Deviation: -2%
-- **variant**: 52 users (52%) | Expected: 50% | Deviation: +2%
-- **Total**: 100 users enrolled successfully
+**Results for Dashboard Layout Test:**
+- **Total Users**: 500 enrolled successfully
+- **control**: 147 users (29.4%) - Expected: 30% | ✅ Deviation: -0.6%
+- **variant**: 353 users (70.6%) - Expected: 70% | ✅ Deviation: +0.6%
 
 **Analysis:**
-✅ Distribution is well-balanced (within 4% of expected 50/50 split)
-✅ Random assignment algorithm working correctly
-✅ All users successfully enrolled and assigned conditions
-✅ Maximum deviation: 2% (well within acceptable range)
+✅ Excellent balance (within 1% of target)  
+✅ Random assignment working correctly
+✅ Ready for real users
 
-The condition balance is healthy for reliable A/B testing results.
+**Recommended Next Steps:**
+- Start enrollment: "Start Dashboard Layout Test"
+- Add specific users: "Add users to this experiment"  
+- View configuration: "Show experiment details"
+
+Your experiment is ready to go live!
 ```
 
-### Consistency Rule Testing - Create experiments and verify assignment behavior
+## 5. Error Handling and Recovery
+
+### Typo in Experiment Name
+```
+User: Start the Dashbord Layout Test
+
+Bot: I couldn't find an experiment called "Dashbord Layout Test". Did you mean:
+
+1. **Dashboard Layout Test** (created 2 minutes ago)
+2. **Homepage Redesign Test** (currently running)
+
+Or would you like me to list all your experiments?
+
+[Start Dashboard Layout Test] [Start Homepage Redesign Test] [List All Experiments]
+```
+
+### Attempting Dangerous Action
+```
+User: Delete Dashboard Layout Test
+
+Bot: ⚠️ **Confirm Experiment Deletion**
+
+**Experiment**: Dashboard Layout Test (`def789-abc123`)
+- **Status**: inactive  
+- **Created**: 3 minutes ago
+- **Users enrolled**: 0 (was only used for testing)
+
+🚨 **Warning**: This action cannot be undone
+- Experiment configuration will be permanently deleted
+- All associated data will be lost
+
+**Are you sure?** Type "DELETE Dashboard Layout Test" to confirm, or "cancel" to abort.
+```
 
 ```
-User: Create a test experiment with individual assignment and individual consistency, then verify the assignment behavior
+User: Actually, just start it instead
 
-Bot: I'll create a test experiment and verify the assignment behavior across different experiment phases.
+Bot: Good choice! I'll start the experiment instead of deleting it.
 
-**Step 1: Get Available Contexts**
-(Calls `get_context_metadata`)
+**Starting Dashboard Layout Test...**
 
-**Step 2: Create Test Experiment**
-(Calls `create_experiment` with name="Individual Assignment Test", context="assign-prog", assignment_unit="individual", consistency_rule="individual", post_experiment_rule="continue")
+✓ **Experiment Started Successfully!**
 
-Creating experiment with:
-- **Name**: "Individual Assignment Test"
-- **Context**: assign-prog
-- **Unit of Assignment**: individual
-- **Consistency Rule**: individual
-- **Post Experiment Rule**: continue
+**Status**: inactive → **enrolling**
+
+**What this means:**
+- Users visiting SelectSection/absolute_value_plot_equality now get experimental conditions
+- 30% get control, 70% get variant  
+- Real users are now being enrolled
+
+**Monitoring:**
+- Check enrollment: "How many users are enrolled?"
+- View distribution: "Show current balance"
+- Stop anytime: "Stop Dashboard Layout Test"
+
+Your experiment is now live! 🚀
+```
+
+## 6. Complex Multi-Step Operations
+
+### Creating Group-Based Experiment
+```
+User: Create an experiment for mathstream with group assignment
+
+Bot: I'll create a group assignment experiment for mathstream. 
+
+What would you like to name this experiment?
+```
+
+```
+User: Classroom Hint System
+
+Bot: Great! Since you specified group assignment, I need to know which group type to use.
+
+**Available group types for mathstream:**
+- **schoolId** - All students from same school get same condition
+- **classId** - All students from same class get same condition
+
+**Which group type?**
+
+💡 *For classroom interventions, classId is usually better*
+
+[Use classId] [Use schoolId] [Explain Difference]
+```
+
+```
+User: Explain difference
+
+Bot: ## Group Assignment Types
+
+**schoolId grouping:**
+- All students from Lincoln Elementary → Control
+- All students from Washington Middle → Variant  
+- Use when: School-level policies or system-wide changes
+
+**classId grouping:**
+- Ms. Smith's 3rd grade class → Control
+- Mr. Jones's 3rd grade class → Variant
+- Use when: Teacher training, classroom tools, or class-specific interventions
+
+**For "Classroom Hint System"**: classId makes more sense since hints are used within individual classrooms.
+
+**Use classId for this experiment?**
+
+[Yes, use classId] [No, use schoolId] [More Questions]
+```
+
+```
+User: Yes, use classId
+
+Bot: Perfect! For mathstream context, the available decision point is:
+
+**lesson-stream / question-hint**
+
+This means the experiment triggers when students encounter question hints during lessons.
+
+**Continue with this decision point?**
+
+[Yes, continue] [Explain Decision Points] [See Other Options]
+```
+
+```
+User: Yes, continue
+
+Bot: ## Ready to Create Group Experiment
+
+**Classroom Hint System**
+- **Context**: mathstream  
+- **Assignment**: Group (by classId)
+- **Consistency**: Group (automatically set)
+- **Decision Point**: lesson-stream / question-hint
 - **Conditions**: control (50%), variant (50%)
-- **Decision Point**: SelectSection / absolute_value_plot_equality
 
-✓ Experiment created successfully (ID: `test-123-456`)
+**Group Behavior:**
+- When first student from a class visits, whole class gets assigned
+- All students in same class always get same condition
+- Classes are randomly assigned to control or variant
 
-**Step 3: Test Assignment Behavior**
-(Calls `test_consistency_rules` with experiment_id="test-123-456", test_users=["student_1", "student_2", "student_3", "student_4", "student_5"])
+**Proceed with creation?**
 
-Testing 5 users across three experiment phases:
-
-**Assignment Results Table:**
-
-| User | Inactive | Enrolling | Complete |
-|------|----------|-----------|----------|
-| student_1 | Default | Default | Default |
-| student_2 | - | Control | Control |
-| student_3 | - | Variant | Variant |
-| student_4 | - | Control | Control |
-| student_5 | - | - | Default |
-
-**Verification Results:**
-- **student_1**: default → default → default (✅ consistent)
-- **student_2**: not visited → control → control (✅ consistent)
-- **student_3**: not visited → variant → variant (✅ consistent)
-- **student_4**: not visited → control → control (✅ consistent)
-- **student_5**: not visited → not visited → default (✅ correct)
-
-**Assignment Behavior Verified:**
-✅ **Individual assignment**: Each user gets their own random assignment
-✅ **Individual consistency**: Users maintain their assigned condition
-✅ **Post-experiment rule**: Users continue with their assigned condition
-✅ **Late arrivals**: Users not enrolled during "enrolling" get default in "complete"
-
-The consistency rules are working correctly for individual assignment with individual consistency!
+[Create Experiment] [Modify Conditions] [Change Settings] [Cancel]
 ```
+
+## 7. Smart Context Recognition
+
+### Referencing Previous Work
+```
+User: How many users are enrolled in the experiment we just created?
+
+Bot: The **Classroom Hint System** experiment we just created has **0 users enrolled** because it's currently **inactive**.
+
+**To get enrollment data:**
+- **Start the experiment first**: "Start Classroom Hint System"
+- **Then users will be enrolled** when they visit lesson-stream/question-hint
+- **Check enrollment anytime**: "Show enrollment stats"
+
+**Would you like to start the experiment now?**
+
+[Start Experiment] [Test Balance First] [Keep Inactive]
+```
+
+### Understanding Implicit References  
+```
+User: What's the current balance?
+
+Bot: For the **Classroom Hint System** experiment (the one we've been working on):
+
+**Current Status**: inactive
+**Enrollment**: 0 users (experiment not started)
+
+**To check balance:**
+- **If you want to test**: "Test condition balance with 100 users"
+- **If you want real data**: Start the experiment first, then check balance
+
+**Which would you prefer?**
+
+[Test Balance (Simulation)] [Start Experiment] [Switch to Different Experiment]
+```
+
+## 8. Helpful Suggestions and Guidance
+
+### User Asks About Metrics
+```
+User: How do I track metrics for my experiment?
+
+Bot: UpGrade handles condition assignment, but **metric tracking** happens in your application code. Here's how it typically works:
+
+**What UpGrade Does:**
+✅ Assigns users to conditions (control/variant)
+✅ Tracks which users saw which conditions
+✅ Provides assignment data for analysis
+
+**What You Need to Do:**
+📊 Implement metric collection in your app
+📊 Log events (clicks, conversions, time spent, etc.)  
+📊 Analyze results using your data
+
+**For mathstream context**, you might track:
+- Question completion rates
+- Hint usage frequency  
+- Student engagement time
+- Learning outcomes
+
+**Need help with:**
+- Setting up experiment structure? 
+- Understanding decision points?
+- Planning your measurement strategy?
+
+[Explain Experiment Structure] [Help Plan Metrics] [Show Decision Point Examples]
+```
+
+### Proactive Help
+```
+User: My experiment isn't working
+
+Bot: I'd like to help troubleshoot! Can you tell me more about what's not working?
+
+**Common issues:**
+1. **No users being enrolled** - Experiment might be inactive
+2. **Users getting wrong conditions** - Decision point might be incorrect  
+3. **Conditions not applying** - App integration issue
+4. **Inconsistent assignments** - Group/consistency rule confusion
+
+**Which experiment are you having trouble with?**
+
+If you're not sure, I can:
+- List your experiments and their current status
+- Check if any experiments are currently enrolling users
+- Explain how to verify experiment integration
+
+[List My Experiments] [Check Experiment Status] [Debug Integration] [Explain Common Issues]
+```
+
+## Key Features Demonstrated
+
+### 1. **Natural Conversation Flow**
+- No explicit tool calls visible to user
+- Smooth transitions between topics
+- Context maintained across multiple turns
+
+### 2. **Intelligent Clarification**
+- Ambiguous queries trigger specific clarification options
+- Never assumes unclear intent
+- Provides helpful context for decision-making
+
+### 3. **Progressive Information Gathering**
+- Collects required information step-by-step
+- Provides helpful hints and examples
+- Offers quick action buttons for common choices
+
+### 4. **Context Awareness**
+- Remembers previous actions and decisions
+- Can reference "the experiment we just created"
+- Builds on partial information across turns
+
+### 5. **Safety and Confirmation**
+- Always confirms before potentially destructive actions
+- Provides clear warnings for irreversible operations
+- Allows users to change their mind
+
+### 6. **Helpful Guidance**
+- Proactively suggests next steps
+- Explains concepts when needed
+- Provides troubleshooting assistance
+
+### 7. **Error Recovery**
+- Handles typos and unclear references gracefully
+- Suggests alternatives when things go wrong
+- Allows easy correction and continuation

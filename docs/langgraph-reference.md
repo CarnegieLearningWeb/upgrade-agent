@@ -1,6 +1,6 @@
-# LangGraph Documentation for GitHub Copilot
+# LangGraph Documentation
 
-This documentation is provided to help GitHub Copilot understand LangGraph 0.6.x patterns and suggest better code completions. It covers the essential concepts, patterns, and examples for building stateful AI agents with LangGraph.
+This documentation is provided to help understand LangGraph 0.6.x patterns and suggest better code completions. It covers the essential concepts, patterns, and examples for building stateful AI agents with LangGraph.
 
 ## Overview
 
