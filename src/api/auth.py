@@ -3,6 +3,7 @@ from typing import Optional, Dict
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from src.config import config
+from src.exceptions import AuthenticationError
 
 
 class UpGradeAuth:
@@ -11,7 +12,7 @@ class UpGradeAuth:
         self.credentials = None
         self.service_account_key_path = config.UPGRADE_SERVICE_ACCOUNT_KEY_PATH
 
-    async def get_access_token(self) -> str:
+    def get_access_token(self) -> str:
         try:
             if not self.credentials:
                 if not os.path.exists(self.service_account_key_path):
@@ -29,16 +30,16 @@ class UpGradeAuth:
             return self.cached_token
 
         except Exception as e:
-            raise Exception(f"Authentication failed: {str(e)}")
+            raise AuthenticationError(f"Authentication failed: {str(e)}")
     
-    async def get_headers(self, include_auth: bool = True) -> Dict[str, str]:
+    def get_headers(self, include_auth: bool = True) -> Dict[str, str]:
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
         
         if include_auth:
-            token = await self.get_access_token()
+            token = self.get_access_token()
             headers["Authorization"] = f"Bearer {token}"
         
         return headers

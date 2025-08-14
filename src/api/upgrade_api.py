@@ -20,7 +20,7 @@ class AuthType(Enum):
 
 
 class UpGradeAPIError(Exception):
-    def __init__(self, message: str, status_code: int = None, response_data: Any = None):
+    def __init__(self, message: str, status_code: Optional[int] = None, response_data: Any = None):
         self.message = message
         self.status_code = status_code
         self.response_data = response_data
@@ -34,7 +34,7 @@ class UpGradeAPI:
         self.retry_attempts = 3
         self.retry_delay = 1
     
-    async def _build_headers(self, auth_type: AuthType, user_id: Optional[str] = None) -> Dict[str, str]:
+    def _build_headers(self, auth_type: AuthType, user_id: Optional[str] = None) -> Dict[str, str]:
         """Build appropriate headers based on auth type."""
         headers = {
             "Content-Type": "application/json",
@@ -42,11 +42,10 @@ class UpGradeAPI:
         }
         
         if auth_type == AuthType.BEARER:
-            token = await auth_manager.get_access_token()
+            token = auth_manager.get_access_token()
             headers["Authorization"] = f"Bearer {token}"
-        elif auth_type == AuthType.USER_ID:
-            if user_id:
-                headers["User-Id"] = user_id
+        elif auth_type == AuthType.USER_ID and user_id:
+            headers["User-Id"] = user_id
         # AuthType.NONE adds no additional headers
         
         return headers
@@ -62,7 +61,7 @@ class UpGradeAPI:
     ) -> APIResponse:
         """Unified request method handling all auth types with retry logic."""
         url = f"{self.base_url}{endpoint}"
-        headers = await self._build_headers(auth_type, user_id)
+        headers = self._build_headers(auth_type, user_id)
         
         for attempt in range(self.retry_attempts):
             try:
@@ -121,24 +120,34 @@ class UpGradeAPI:
     
     async def health_check(self) -> HealthCheckResponse:
         response = await self._make_request("GET", "/", auth_type=AuthType.NONE)
+        if not response.data or not isinstance(response.data, dict):
+            raise UpGradeAPIError("Invalid health check response format")
         return HealthCheckResponse(**response.data)
     
     async def get_context_metadata(self) -> ContextMetadata:
         response = await self._make_request("GET", "/experiments/contextMetaData")
+        if not response.data or not isinstance(response.data, dict):
+            raise UpGradeAPIError("Invalid context metadata response format")
         return ContextMetadata(**response.data)
     
     # Experiment Management Endpoints
     
     async def get_experiment_names(self) -> List[ExperimentName]:
         response = await self._make_request("GET", "/experiments/names")
+        if not response.data or not isinstance(response.data, list):
+            raise UpGradeAPIError("Invalid experiment names response format")
         return [ExperimentName(**exp) for exp in response.data]
     
     async def get_all_experiments(self) -> List[Experiment]:
         response = await self._make_request("GET", "/experiments")
+        if not response.data or not isinstance(response.data, list):
+            raise UpGradeAPIError("Invalid experiments response format")
         return [Experiment(**exp) for exp in response.data]
     
     async def get_experiment_by_id(self, experiment_id: str) -> Experiment:
         response = await self._make_request("GET", f"/experiments/single/{experiment_id}")
+        if not response.data or not isinstance(response.data, dict):
+            raise UpGradeAPIError("Invalid experiment response format")
         return Experiment(**response.data)
     
     async def create_experiment(self, experiment: ExperimentCreateRequest) -> Experiment:
@@ -147,6 +156,8 @@ class UpGradeAPI:
             "/experiments",
             data=experiment.model_dump(exclude_none=True)
         )
+        if not response.data or not isinstance(response.data, dict):
+            raise UpGradeAPIError("Invalid create experiment response format")
         return Experiment(**response.data)
     
     async def update_experiment(self, experiment_id: str, experiment: ExperimentCreateRequest) -> Experiment:
@@ -155,6 +166,8 @@ class UpGradeAPI:
             f"/experiments/{experiment_id}",
             data=experiment.model_dump(exclude_none=True)
         )
+        if not response.data or not isinstance(response.data, dict):
+            raise UpGradeAPIError("Invalid update experiment response format")
         return Experiment(**response.data)
     
     async def update_experiment_state(self, state_update: ExperimentStateUpdate) -> Experiment:
@@ -163,6 +176,8 @@ class UpGradeAPI:
             "/experiments/state",
             data=state_update.model_dump(exclude_none=True)
         )
+        if not response.data or not isinstance(response.data, dict):
+            raise UpGradeAPIError("Invalid experiment state update response format")
         return Experiment(**response.data)
     
     async def delete_experiment(self, experiment_id: str) -> APIResponse:
@@ -178,6 +193,8 @@ class UpGradeAPI:
             user_id=user_id,
             data=init_request.model_dump(exclude_none=True)
         )
+        if not response.data or not isinstance(response.data, dict):
+            raise UpGradeAPIError("Invalid init user response format")
         return InitResponse(**response.data)
     
     async def assign_condition(self, user_id: str, context: str) -> AssignResponse:
@@ -200,6 +217,8 @@ class UpGradeAPI:
             user_id=user_id,
             data=mark_request.model_dump(exclude_none=True)
         )
+        if not response.data or not isinstance(response.data, dict):
+            raise UpGradeAPIError("Invalid mark decision point response format")
         return MarkResponse(**response.data)
 
 

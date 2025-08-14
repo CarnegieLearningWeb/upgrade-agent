@@ -436,7 +436,7 @@ async def delete_experiment(experiment_id: str) -> Dict[str, Any]:
 
 ---
 
-## 4. User Simulation Tools (UPDATED: maybe we don't need these)
+## 4. User Simulation Tools (OUTDATED: maybe we don't need these)
 
 ### `simulate_user_journey`
 
