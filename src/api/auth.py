@@ -2,9 +2,7 @@ import os
 from typing import Optional, Dict
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
-from src.config import config
-from src.exceptions import AuthenticationError
-
+from src.config.config import config
 
 class UpGradeAuth:
     def __init__(self):

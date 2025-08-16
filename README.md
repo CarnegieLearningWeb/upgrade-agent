@@ -9,7 +9,8 @@ For the MVP, users interact with the chatbot in the Terminal console (it may lat
 ## Design Principles
 
 The app prioritizes:
-- **Accuracy over token cost** - Reliable understanding and execution
+
+- **Accuracy over token cost** - Reliable understanding and execution of A/B testing operations
 - **Intelligent clarification** - Asks for clarification on ambiguous queries (e.g., "What's the status?") rather than making assumptions
 - **Progressive information gathering** - Naturally collects missing information through conversation
 - **Safety first** - Always confirms before potentially destructive actions
@@ -19,186 +20,177 @@ The app prioritizes:
 
 UpGradeAgent uses a **streamlined 5-node architecture** that handles all conversation flows intelligently:
 
-1. **Conversation Analyzer** - Understands user intent with full context
-2. **Information Gatherer** - Collects missing information progressively  
-3. **Confirmation Handler** - Ensures user approval before actions
-4. **Tool Executor** - Executes UpGrade API operations safely
-5. **Response Generator** - Creates natural, helpful responses
+1. **Conversation Analyzer** (LLM) - Intent classification and orchestration
+2. **Information Gatherer** (LLM) - Data collection and validation
+3. **Confirmation Handler** (Non-LLM) - Safety confirmations for destructive actions
+4. **Tool Executor** (Non-LLM) - API execution layer
+5. **Response Generator** (LLM) - All user-facing communication
 
-This architecture handles everything from simple greetings to complex multi-step experiment creation without the complexity of traditional router-based approaches.
+### Tool Architecture
+
+Each node has access to specific tools that match its responsibilities:
+
+- **Node-specific tool access**: Enforces architectural boundaries and maintains separation of concerns
+- **Auto-storage pattern**: Gatherer tools automatically store results in predictable locations
+- **Progressive parameter building**: Schema tools guide the LLM through complex parameter collection
+- **Granular error handling**: Specific error types (api, auth, validation, not_found, unknown) for better debugging
 
 ## Quick Reference
 
-### Documentation
+### Core Documentation
 
-- [Graph Structure](./docs/graph-structure.md) - Streamlined 5-node architecture design and implementation
-- [Tools](./docs/tools.md) - API integration and tool specifications
-- [Example Chats](./docs/example-chats.md) - Sample bot interactions demonstrating conversation patterns
+- [Graph Structure](./docs/graph-structure.md) - Complete 5-node architecture design and implementation
+- [Tools](./docs/tools.md) - Comprehensive tool specifications and API integration patterns
+
+### Supporting Documentation
+
 - [Core Terms](./docs/core-terms.md) - Essential UpGrade terminology and concepts
 - [Assignment Behavior](./docs/assignment-behavior.md) - How assignment rules and consistency work together
 - [API Reference](./docs/api-reference.md) - Complete API endpoints and request/response examples
-- [LangGraph Reference](./docs/langgraph-reference.md) - LangGraph framework documentation for implementation
 
-### Implementation Structure
-
-**Current Structure (Phase 1 Complete):**
-- `/src/api/` - ✅ Production-ready UpGrade API client and authentication
-- `/src/models/` - ✅ Comprehensive Pydantic models for all API types  
-- `/src/config.py` - ✅ Environment configuration management
-- `/reference/` - ✅ UpGrade controller implementations for verification
-- Verification reports - ✅ Complete backend compliance documentation
-
-**Planned Structure (Phase 2):**
-- `/src/agent/` - 🔄 LangGraph nodes and graph definition  
-- `/src/tools/` - 🔄 LangGraph tools built on API client
+*Note: Supporting documentation files contain the knowledge base content used by the Information Gatherer node.*
 
 ## Bot Capabilities
 
-### Core Conversational Abilities
-- **Natural conversation** - Handles greetings, general questions, and context-aware follow-ups
-- **Intelligent clarification** - Resolves ambiguous queries like "What's the status?"
-- **Progressive information gathering** - Guides users through complex operations step-by-step
-- **Error recovery** - Handles typos, wrong inputs, and helps users get back on track
-
-### UpGrade-Specific Operations
+### Educational Features
 - **Explain Terms and Concepts** - Answer questions about UpGrade terminology and A/B testing
+- **Assignment Behavior Guidance** - Explain how different assignment rules interact
+- **Schema Information** - Provide parameter requirements for various operations
+
+### System Operations
 - **System Health** - Check UpGrade service status and version information
-- **Experiment Management** - List, create, update, delete, and start/stop experiments
-- **Experiment Details** - Fetch and explain experiment configurations in detail
-- **User Simulation** - Simulate users visiting decision points and getting assigned conditions
-- **Testing & Analysis** - Test condition balance and verify consistency rule behavior
+- **Context Discovery** - List available app contexts and their supported values
+
+### Experiment Management
+- **List and Search** - Find experiments by name, context, or other criteria
+- **Create Experiments** - Guide users through experiment creation with validation
+- **Update Experiments** - Modify existing experiments with partial updates
+- **Delete Experiments** - Safely remove experiments with confirmation
+- **Status Management** - Start, stop, and change experiment states
+
+### User Simulation & Testing
+- **User Initialization** - Set up users with group memberships for testing
+- **Condition Assignment** - Simulate users getting assigned to experimental conditions
+- **Decision Point Tracking** - Record when users visit experiment decision points
+- **Assignment Analysis** - Verify condition balance and consistency rule behavior
+
+## Typical User Interactions
+
+```
+User: "What contexts are available?"
+Bot: Lists all available contexts from UpGrade
+
+User: "Create an experiment called 'Math Hints' in assign-prog context"
+Bot: Guides through parameter collection → Confirms creation → Executes
+
+User: "What conditions did user123 get for that experiment?"
+Bot: Simulates user assignment and shows conditions
+
+User: "Delete the Math Hints experiment"
+Bot: ⚠️ Shows destruction warning → Confirms → Deletes if approved
+```
 
 ## Supported API Endpoints
 
 ### System Information
+
 - `GET /` - Health check and version info
 - `GET /experiments/contextMetaData` - Get available app contexts and their supported values
 
 ### Experiment Management
+
 - `GET /experiments/names` - Get all experiment names and IDs
 - `GET /experiments` - Get all experiments with optional filtering
 - `GET /experiments/single/<experiment_id>` - Get detailed experiment configuration
 - `POST /experiments` - Create new experiment
-- `PUT /experiments/<experiment_id>` - Update experiment configuration
+- `PUT /experiments/<experiment_id>` - Update experiment configuration (supports partial updates)
 - `POST /experiments/state` - Update experiment status (start/stop)
 - `DELETE /experiments/<experiment_id>` - Delete experiment
 
 ### User Simulation & Testing
+
 - `POST /v6/init` - Initialize users with group memberships
 - `POST /v6/assign` - Get experiment condition assignments for users
 - `POST /v6/mark` - Record decision point visits
+
+## Environment Setup
+
+### Required Configuration
+
+```bash
+# UpGrade API Configuration
+UPGRADE_API_URL=http://localhost:3030/api  # or production URL
+UPGRADE_AUTH_TOKEN=your_bearer_token
+
+# Optional Configuration
+DEFAULT_USER_ID=simulation_user
+REQUEST_TIMEOUT=30
+```
+
+### Dependencies
+
+- Python 3.8+
+- LangGraph
+- Anthropic Claude API access
+- aiohttp for async API calls
+- pydantic for data validation
 
 ## Limitations & Unsupported Features
 
 The following UpGrade features are **not supported** in the MVP:
 
 ### Unsupported Experiment Types
+
 - Within-subjects Experiments (Unit of Assignment)
-- Factorial Experiments (Design Type)  
+- Factorial Experiments (Design Type)
 - Stratified Random Sampling Experiments (Assignment Algorithm)
 - TS Configurable (MOOClet) Experiments (Assignment Algorithm)
 
 ### Unsupported Features
-- Metrics management and logging (`/v6/log` endpoint)
-- Feature flags and preview users
-- Public segment creation/management
-- Advanced analytics and reporting
 
-The bot will politely reject requests for these features and suggest supported alternatives.
+- **Payload Management** - Viewing, adding, or updating payloads from experiments
+- **Metrics and Logging** - Management and logging via `/v6/log` endpoint
+- **Feature Flags** - Preview users and feature flag functionality
+- **Public Segments** - Creation, management, or assignment of public segments
+- **Advanced Analytics** - Detailed reporting and statistical analysis
+- **Bulk Operations** - Mass experiment creation or updates
+- **Import/Export** - Experiment configuration import/export
 
-## Example Interactions
+### Design Limitations
 
-### Simple Question
+- **Terminal Interface Only** - Web UI not supported in MVP
+- **Single Session Memory** - No persistence across application restarts
+- **English Only** - No internationalization support
+- **Basic Error Recovery** - Limited retry logic for transient failures
+
+## Error Handling
+
+The bot provides helpful error messages for common issues:
+
+- **Authentication errors** - Clear guidance on token setup
+- **Validation errors** - Specific parameter requirements and fixes
+- **API errors** - User-friendly explanations of service issues
+- **Not found errors** - Suggestions for finding the right resources
+- **Unknown errors** - Graceful degradation with error reporting
+
+## Development Notes
+
+### Code Organization
+
 ```
-User: What is A/B testing?
-Bot: A/B testing is a method of comparing two or more versions of something...
-```
-
-### Ambiguous Query Resolution  
-```
-User: What's the status?
-Bot: I need clarification on what status you're asking about:
-     1. UpGrade service health status
-     2. Status of your experiments  
-     3. Explanation of "status" concept
-     Which one would you like to know about?
-```
-
-### Progressive Experiment Creation
-```
-User: Create a new experiment
-Bot: I'll help you create a new experiment. What would you like to name it?
-
-User: Homepage Test
-Bot: Great! Which app context should this experiment run in?
-     Available: assign-prog, mathstream, livehint-ai
-
-User: assign-prog  
-Bot: Perfect! Which decision point should this experiment target?...
-```
-
-See [Example Chats](./docs/example-chats.md) for complete conversation examples.
-
-## Implementation Progress
-
-### ✅ COMPLETED: API Foundation Layer (Phase 1)
-
-**Status**: Production-ready API client with 100% backend compliance
-
-#### Core Components Built:
-- **`src/api/upgrade_api.py`** - Complete async API client with unified auth handling
-- **`src/api/auth.py`** - Google service account authentication with token refresh
-- **`src/models/api_types.py`** - Comprehensive Pydantic models for all API types
-- **`src/config.py`** - Environment configuration management
-- **`main.py`** - Basic console foundation (echo chat loop)
-
-#### Key Features:
-- **11 API endpoints** fully implemented and tested
-- **3 authentication patterns** (none/bearer/user-id) with enum-based clarity  
-- **Async-first design** optimized for LangGraph integration
-- **Enterprise error handling** with retries and structured exceptions
-- **100% backend verification** against actual UpGrade controllers
-- **Type safety** with Pydantic models and proper optional field handling
-
-#### Testing & Verification:
-- **Live API tests** passing (5/5 core endpoints)
-- **Backend compliance** verified line-by-line against `reference/` controllers
-- **Documentation** with comprehensive verification reports
-
-#### Ready For:
-The API foundation is ready for Phase 2: Building LangGraph tools and agent nodes on top of this solid base.
-
----
-
-### 🔄 NEXT: LangGraph Tools & Agent Implementation (Phase 2)
-
-**Upcoming tasks**:
-1. Build LangGraph tools layer using the API client
-2. Implement the 5-node agent architecture 
-3. Add conversation state management
-4. Connect tools to agent nodes for full functionality
-
----
-
-## Getting Started
-
-### For Development:
-```bash
-# Setup environment
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your UpGrade API URL and service account file path
-
-# Test API foundation
-python test_api_live.py
+/src/
+  /nodes/          # LangGraph node implementations
+  /tools/          # Tool functions organized by node
+  /api/            # UpGrade API client
+  /exceptions/     # Custom exception types
+  /models/         # Pydantic data models
+  /config/         # Configuration management
 ```
 
-### For Understanding:
-1. **Review the Architecture**: Start with [Graph Structure](./docs/graph-structure.md) to understand the 5-node design
-2. **Understand the Domain**: Read [Core Terms](./docs/core-terms.md) for UpGrade concepts  
-3. **See It In Action**: Browse [Example Chats](./docs/example-chats.md) for interaction patterns
-4. **API Implementation**: Review verification reports for technical details
+### Key Design Patterns
+
+- **Async/await throughout** - All API calls and tools are async
+- **Type safety** - Extensive use of TypedDict and Pydantic models
+- **Error propagation** - Structured error handling with specific types
+- **Auto-storage decorators** - Automatic result caching with predictable keys
+- **Progressive disclosure** - Complex operations broken into guided steps
