@@ -12,19 +12,6 @@ UpGradeAgent uses a **node-based tool architecture** that aligns with the 5-node
 - **Error propagation**: Automatic error handling with manual override capabilities
 - **Type safety**: All tools use TypedDict for parameter validation
 
-## Configuration
-
-```python
-# /tools/config.py
-import os
-
-class ToolConfig:
-    UPGRADE_API_URL = os.getenv("UPGRADE_API_URL", "http://localhost:3030/api")
-    AUTH_TOKEN = os.getenv("UPGRADE_AUTH_TOKEN")
-    DEFAULT_USER_ID = os.getenv("DEFAULT_USER_ID", "simulation_user")
-    REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))
-```
-
 ## Tool Organization
 
 ### 1. Conversation Analyzer Tools (`/tools/analyzer/`)
@@ -456,6 +443,43 @@ def get_update_experiment_schema() -> Dict[str, Any]:
         ]
     }
 
+@auto_store("update_experiment_status_schema")
+def get_update_experiment_status_schema() -> Dict[str, Any]:
+    """Get schema for experiment status updates"""
+    return {
+        "required_parameters": {
+            "experiment_id": {
+                "type": "str",
+                "validation": "Must be valid experiment ID",
+                "helper_tool": "get_experiment_names() to get valid experiment IDs"
+            },
+            "status": {
+                "type": "str",
+                "validation": "Must be valid experiment status",
+                "choices": ["inactive", "preview", "scheduled", "enrolling", "enrollmentComplete", "cancelled", "archived"],
+                "common_transitions": {
+                    "inactive": ["preview", "scheduled", "enrolling"],
+                    "preview": ["inactive", "scheduled", "enrolling"],
+                    "scheduled": ["inactive", "enrolling", "cancelled"],
+                    "enrolling": ["enrollmentComplete", "cancelled"],
+                    "enrollmentComplete": ["archived"],
+                    "cancelled": ["archived"]
+                }
+            }
+        },
+        "optional_parameters": {},
+        "validation_dependencies": {
+            "experiment_existence": "Experiment must exist before status can be updated",
+            "status_transition": "Some status transitions may not be allowed depending on current state"
+        },
+        "parameter_gathering_flow": [
+            "1. Validate experiment exists → call get_experiment_names() or get_experiment_details()",
+            "2. Validate status is valid → check against choices list",
+            "3. Set experiment_id and status in action_params",
+            "4. No confirmation needed for status updates (non-destructive)"
+        ]
+    }
+
 @auto_store("delete_experiment_schema")
 def get_delete_experiment_schema() -> Dict[str, Any]:
     """Get schema for experiment deletion"""
@@ -670,8 +694,8 @@ def get_group_types_for_context(context: str) -> List[str]:
 def set_action_needed(
     action: Literal[
         "create_experiment", "update_experiment", "delete_experiment",
-        "init_experiment_user", "get_decision_point_assignments", 
-        "mark_decision_point"
+        "update_experiment_status", "init_experiment_user", 
+        "get_decision_point_assignments", "mark_decision_point"
     ],
     reasoning: str
 ) -> str:
@@ -725,6 +749,20 @@ def update_experiment(experiment_id: str, **params) -> Dict:
     
     Automatically fetches current experiment data and merges with provided updates.
     Only specify parameters that need to be changed.
+    """
+
+def update_experiment_status(experiment_id: str, status: str) -> Dict:
+    """POST /experiments/state - Update experiment status
+    
+    Args:
+        experiment_id: UUID of the experiment to update
+        status: New status for the experiment 
+                (inactive, preview, scheduled, enrolling, enrollmentComplete, cancelled, archived)
+    
+    Returns:
+        Updated experiment details with new status
+    
+    Note: Status transitions may have restrictions based on current experiment state.
     """
 
 def delete_experiment(experiment_id: str) -> Dict:
@@ -868,6 +906,10 @@ class CreateExperimentParams(TypedDict):
     conditions: List[ConditionConfig]
     partitions: List[PartitionConfig]
     # ... additional fields
+
+class UpdateExperimentStatusParams(TypedDict):
+    experimentId: str
+    state: Literal["inactive", "preview", "scheduled", "enrolling", "enrollmentComplete", "cancelled", "archived"]
 
 class InitUserParams(TypedDict):
     user_id: str
@@ -1014,8 +1056,8 @@ class ToolRegistry:
             ],
             "executor": [
                 "create_experiment", "update_experiment", "delete_experiment",
-                "init_experiment_user", "get_decision_point_assignments",
-                "mark_decision_point"
+                "update_experiment_status", "init_experiment_user", 
+                "get_decision_point_assignments", "mark_decision_point"
             ],
             "response": [
                 "get_context_metadata", "get_experiment_names", "get_all_experiments",
@@ -1147,6 +1189,11 @@ def test_create_experiment():
     params = {"name": "Test", "context": ["assign-prog"]}
     result = create_experiment(**params)
     assert result["id"] is not None
+
+def test_update_experiment_status():
+    params = {"experiment_id": "test-id", "status": "enrolling"}
+    result = update_experiment_status(**params)
+    assert result["state"] == "enrolling"
 
 # /tests/tools/test_registry.py
 def test_node_tool_access():

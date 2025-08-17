@@ -34,7 +34,8 @@ class AgentState(TypedDict):
     # === Gatherer Outputs ===
     action_needed: Optional[Literal[
         "create_experiment", "update_experiment", "delete_experiment",
-        "init_experiment_user", "get_decision_point_assignments", "mark_decision_point"
+        "update_experiment_status", "init_experiment_user", 
+        "get_decision_point_assignments", "mark_decision_point"
     ]]
     action_params: Dict[str, Any]  # Collected/validated parameters
     missing_params: List[str]  # What we still need from user
@@ -128,6 +129,7 @@ get_assignment_terms() -> gathered_info["assignment_terms"]
 get_available_contexts() -> gathered_info["available_contexts"]
 get_create_experiment_schema() -> gathered_info["create_experiment_schema"]
 get_update_experiment_schema() -> gathered_info["update_experiment_schema"]
+get_update_experiment_status_schema() -> gathered_info["update_experiment_status_schema"]
 get_delete_experiment_schema() -> gathered_info["delete_experiment_schema"]
 get_init_experiment_user_schema() -> gathered_info["init_experiment_user_schema"]
 get_get_decision_point_assignments_schema() -> gathered_info["get_decision_point_assignments_schema"]
@@ -142,7 +144,8 @@ get_group_types_for_context(context: str) -> gathered_info[f"group_types_for_{co
 @tool
 def set_action_needed(
     action: Literal["create_experiment", "update_experiment", "delete_experiment",
-                   "init_experiment_user", "get_decision_point_assignments", "mark_decision_point"],
+                   "update_experiment_status", "init_experiment_user", 
+                   "get_decision_point_assignments", "mark_decision_point"],
     reasoning: str
 ) -> str:
     """Set what action is needed for Tool Executor"""
@@ -179,7 +182,7 @@ def gatherer_routing(state):
     elif state.get("missing_params"):
         return "response_generator"  # Need more info from user first
     else:
-        return "confirmation_handler"  # Ready for execution confirmation
+        return "confirmation_handler"  # Ready for execution after confirmation
 ```
 
 **Key Responsibilities**:
@@ -202,13 +205,19 @@ def gatherer_routing(state):
 2. get_available_contexts()  # Stores in gathered_info["available_contexts"]
 3. get_create_experiment_schema()  # Stores in gathered_info["create_experiment_schema"]
 4. set_action_params({"context": "first_context", "name": "..."})
-5. set_action_needed("create_experiment")  # Ready for execution
+5. set_action_needed("create_experiment")  # Ready for confirmation & execution
+
+# User: "Start the Math Hints experiment"
+1. get_experiment_names()  # Find experiment ID for "Math Hints"
+2. get_update_experiment_status_schema()  # Stores in gathered_info["update_experiment_status_schema"]
+3. set_action_params({"experiment_id": "uuid", "status": "enrolling"})
+4. set_action_needed("update_experiment_status")  # Ready for confirmation & execution
 ```
 
 ### 3. Confirmation Handler
 
 **Type**: Non-LLM (Static Logic)  
-**Purpose**: Generate safety confirmations for state-changing operations
+**Purpose**: Generate safety confirmations for ALL operations executed through Tool Executor
 
 **Tools Available**: None
 
@@ -227,6 +236,11 @@ def confirmation_handler(state):
         
     elif action == "update_experiment":
         message = f"Update experiment '{params['name']}' with new settings?"
+        
+    elif action == "update_experiment_status":
+        status = params.get('status', 'unknown')
+        exp_name = params.get('name', params.get('experiment_id', 'unknown'))
+        message = f"Change experiment '{exp_name}' status to '{status}'?"
         
     elif action == "init_experiment_user":
         message = f"Initialize user '{params.get('user_id', 'unknown')}' for experiment simulation?"
@@ -251,6 +265,7 @@ def confirmation_routing(state):
 **Key Responsibilities**:
 - Generate appropriate confirmation messages for each action type
 - Add warning indicators for irreversible operations
+- Require confirmation for ALL operations that modify state
 - Fast, predictable confirmation generation
 
 ### 4. Tool Executor
@@ -263,6 +278,7 @@ def confirmation_routing(state):
 # All UpGrade API modification endpoints
 create_experiment(**params) -> created_experiment_details
 update_experiment(experiment_id, **params) -> updated_experiment_details 
+update_experiment_status(experiment_id, status) -> updated_experiment_details
 delete_experiment(experiment_id) -> deleted_experiment_details
 init_experiment_user(**params) -> experiment_user
 get_decision_point_assignments(**params) -> decision_point_assignments
@@ -281,6 +297,7 @@ def tool_executor(state):
         "create_experiment": create_experiment,
         "delete_experiment": delete_experiment,
         "update_experiment": update_experiment,
+        "update_experiment_status": update_experiment_status,
         "init_experiment_user": init_experiment_user,
         "get_decision_point_assignments": get_decision_point_assignments,
         "mark_decision_point": mark_decision_point
@@ -417,6 +434,15 @@ Analyzer (needs_info) → Gatherer (get_create_experiment_schema, stores in gath
 Response Generator (get_all_gathered_info, explains schema) → END
 ```
 
+### Experiment Status Update Flow
+```
+User: "Start the Math Hints experiment"
+Analyzer → Gatherer (find experiment ID, set_action_needed("update_experiment_status")) → 
+Confirmation Handler → Response Generator ("Change status to 'enrolling'?") →
+User: "yes" → Analyzer → Tool Executor → 
+Analyzer → Response Generator ("Experiment 'Math Hints' status changed to enrolling") → END
+```
+
 ### Action with Missing Information Flow
 ```
 User: "Create experiment Foo"
@@ -443,9 +469,20 @@ Response Generator (get_errors, explains validation failure) → END
 
 ### Multi-Action Session Flow
 ```
-User: "Create experiment Foo" → ... → Tool Executor (logs creation) →
-User: "Update that experiment's status" → ... → Tool Executor (logs update) →
+User: "Create experiment Foo" → ... → Confirmation → Tool Executor (logs creation) →
+User: "Start that experiment" → ... → Confirmation → Tool Executor (logs status update) →
+User: "Update that experiment's weights" → ... → Confirmation → Tool Executor (logs update) →
 User: "What have we accomplished?" → Response Generator (get_execution_log, summarizes all actions) → END
+```
+
+### Status Transition Flow
+```
+User: "Stop the Running Test experiment"
+Analyzer → Gatherer (find experiment, validate current status is "enrolling") →
+Gatherer (set_action_needed("update_experiment_status"), params: {status: "enrollmentComplete"}) →
+Confirmation Handler → Response Generator ("Change status to 'enrollmentComplete'?") →
+User: "yes" → Analyzer → Tool Executor → 
+Analyzer → Response Generator ("Experiment stopped successfully") → END
 ```
 
 ---
@@ -484,3 +521,15 @@ User: "What have we accomplished?" → Response Generator (get_execution_log, su
 - **Auto-storage**: Tools automatically store results for later access
 - **Token efficiency**: Response Generator chooses what data to access
 - **Session history**: Execution log enables progress summaries and multi-action reporting
+
+### Action Confirmation Patterns
+- ALL actions executed through Tool Executor require user confirmation
+- Confirmation messages are tailored to each action type
+- Destructive operations (like delete) include warning indicators (⚠️)
+- Status changes show both current and target states when possible
+- Confirmation ensures users have full control over all system modifications
+- Valid status transitions for experiments: 
+  - inactive → enrolling (start experiment)
+  - enrolling → enrollmentComplete (stop experiment)
+  - any → cancelled (cancel experiment)
+- Tool Executor logs all confirmed actions in execution_log for tracking

@@ -26,9 +26,6 @@ def main():
             break
         except Exception as e:
             print(f"Error: {e}")
-            if config.DEBUG:
-                import traceback
-                traceback.print_exc()
 
 if __name__ == "__main__":
     main()

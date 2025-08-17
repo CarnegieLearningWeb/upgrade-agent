@@ -113,28 +113,6 @@ Bot: ⚠️ Shows destruction warning → Confirms → Deletes if approved
 - `POST /v6/assign` - Get experiment condition assignments for users
 - `POST /v6/mark` - Record decision point visits
 
-## Environment Setup
-
-### Required Configuration
-
-```bash
-# UpGrade API Configuration
-UPGRADE_API_URL=http://localhost:3030/api  # or production URL
-UPGRADE_AUTH_TOKEN=your_bearer_token
-
-# Optional Configuration
-DEFAULT_USER_ID=simulation_user
-REQUEST_TIMEOUT=30
-```
-
-### Dependencies
-
-- Python 3.8+
-- LangGraph
-- Anthropic Claude API access
-- aiohttp for async API calls
-- pydantic for data validation
-
 ## Limitations & Unsupported Features
 
 The following UpGrade features are **not supported** in the MVP:

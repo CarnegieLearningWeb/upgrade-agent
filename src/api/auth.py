@@ -3,6 +3,8 @@ from typing import Optional, Dict
 from google.auth.transport.requests import Request
 from google.oauth2 import service_account
 from src.config.config import config
+from src.models.constants import CONTENT_TYPE_JSON, ACCEPT_JSON
+from src.exceptions.exceptions import AuthenticationError
 
 class UpGradeAuth:
     def __init__(self):
@@ -32,8 +34,8 @@ class UpGradeAuth:
     
     def get_headers(self, include_auth: bool = True) -> Dict[str, str]:
         headers = {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
+            "Content-Type": CONTENT_TYPE_JSON,
+            "Accept": ACCEPT_JSON
         }
         
         if include_auth:
