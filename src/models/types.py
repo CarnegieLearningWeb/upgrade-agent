@@ -52,10 +52,37 @@ class ExperimentName(TypedDict):
     name: str
 
 
+class EnrollmentCompleteCondition(TypedDict, total=False):
+    """Enrollment complete condition for experiments (all fields optional)."""
+    userCount: int
+    groupCount: int
+
+
+class StratificationFactor(TypedDict):
+    """Stratification factor for experiments."""
+    stratificationFactorName: str
+
+
 class Payload(TypedDict):
     """Payload attached to conditions."""
     type: PayloadType
     value: str
+
+
+# Factorial experiment types
+class Level(TypedDict):
+    """Level definition for factorial experiments."""
+    id: str
+    name: str
+    description: Optional[str]
+    order: Optional[int]
+    payload: Optional[Payload]
+
+
+class LevelCombinationElement(TypedDict):
+    """Level combination element for factorial experiments."""
+    id: str
+    level: Level
 
 
 class ConditionPayload(TypedDict):
@@ -91,8 +118,8 @@ class Condition(TypedDict):
     conditionCode: str
     assignmentWeight: int
     order: int
-    levelCombinationElements: List[Any]  # For factorial experiments
-    conditionPayloads: List[ConditionPayload]
+    levelCombinationElements: Optional[List[LevelCombinationElement]]
+    conditionPayloads: Optional[List[ConditionPayload]]
 
 
 class Partition(TypedDict):
@@ -203,7 +230,7 @@ class Experiment(TypedDict):
     consistencyRule: ConsistencyRule
     assignmentUnit: AssignmentUnit
     postExperimentRule: PostExperimentRule
-    enrollmentCompleteCondition: Optional[Dict[str, Any]]
+    enrollmentCompleteCondition: Optional[EnrollmentCompleteCondition]
     endOn: Optional[str]
     revertTo: Optional[str]
     tags: List[str]
@@ -213,6 +240,7 @@ class Experiment(TypedDict):
     filterMode: FilterMode
     backendVersion: str
     type: ExperimentType
+    stratificationFactor: Optional[StratificationFactor]
     conditions: List[Condition]
     partitions: List[Partition]
     factors: List[Any]  # For factorial experiments
@@ -224,14 +252,42 @@ class Experiment(TypedDict):
 
 
 # Request types for creating/updating experiments
+
+# Factorial experiment request types
+class CreateLevel(TypedDict):
+    """Level data for creating factorial experiments."""
+    id: str
+    name: str
+    description: Optional[str]
+    order: Optional[int]
+    payload: Optional[Payload]
+
+
+class CreateFactor(TypedDict):
+    """Factor data for creating factorial experiments."""
+    id: Optional[str]
+    name: str
+    description: Optional[str]
+    order: int
+    levels: List[CreateLevel]
+
+
+class CreateLevelCombinationElement(TypedDict):
+    """Level combination element for creating factorial experiments."""
+    id: str
+    level: CreateLevel
+
+
 class CreateCondition(TypedDict):
     """Condition data for creating experiments."""
     id: str
+    twoCharacterId: Optional[str]
     conditionCode: str
     assignmentWeight: int
     description: Optional[str]
     order: int
-    name: str
+    name: Optional[str]
+    levelCombinationElements: Optional[List[CreateLevelCombinationElement]]
 
 
 class CreateConditionPayload(TypedDict):
@@ -239,15 +295,16 @@ class CreateConditionPayload(TypedDict):
     id: str
     payload: Payload
     parentCondition: str
-    decisionPoint: str
+    decisionPoint: Optional[str]
 
 
 class CreatePartition(TypedDict):
     """Partition data for creating experiments."""
     id: str
+    twoCharacterId: Optional[str]
     site: str
-    target: str
-    description: str
+    target: Optional[str]
+    description: Optional[str]
     order: int
     excludeIfReached: bool
 
@@ -283,8 +340,9 @@ class CreateMetric(TypedDict):
 
 class CreateQuery(TypedDict):
     """Query data for creating experiments."""
+    id: Optional[str]
     name: str
-    query: Dict[str, Any]  # {"operationType": "avg"}
+    query: Dict[str, Any]
     metric: CreateMetric
     repeatedMeasure: RepeatedMeasure
 
@@ -295,24 +353,29 @@ class CreateExperimentRequest(TypedDict):
     description: str
     consistencyRule: ConsistencyRule
     assignmentUnit: AssignmentUnit
+    group: Optional[str]
+    conditionOrder: Optional[ConditionOrder]
     type: ExperimentType
     context: List[str]
     assignmentAlgorithm: AssignmentAlgorithm
-    stratificationFactor: Optional[Any]
+    stratificationFactor: Optional[StratificationFactor]
     tags: List[str]
     conditions: List[CreateCondition]
-    conditionPayloads: List[CreateConditionPayload]
+    conditionPayloads: Optional[List[CreateConditionPayload]]
     partitions: List[CreatePartition]
     experimentSegmentInclusion: CreateExperimentSegment
     experimentSegmentExclusion: CreateExperimentSegment
     filterMode: FilterMode
+    factors: Optional[List[CreateFactor]]
     queries: List[CreateQuery]
     endOn: Optional[str]
-    enrollmentCompleteCondition: Optional[Dict[str, Any]]
+    enrollmentCompleteCondition: Optional[EnrollmentCompleteCondition]
     startOn: Optional[str]
     state: ExperimentState
     postExperimentRule: PostExperimentRule
     revertTo: Optional[str]
+    moocletPolicyParameters: Optional[Any]
+    rewardMetricKey: Optional[str]
 
 
 class UpdateExperimentStateRequest(TypedDict):
@@ -365,7 +428,7 @@ class ExperimentAssignment(TypedDict):
     site: str
     target: str
     assignedCondition: List[AssignedCondition]
-    assignedFactor: Optional[List[Dict[str, Dict[str, str]]]]  # For factorial experiments
+    assignedFactor: Optional[List[Dict[str, Dict[str, str]]]]
     experimentType: ExperimentType
 
 
