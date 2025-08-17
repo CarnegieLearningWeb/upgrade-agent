@@ -1,25 +1,27 @@
 """
-TypedDict classes for the UpGrade API endpoints.
+Type definitions for UpGrade API interactions.
 
-This module defines types needed for system and experiments endpoints based on 
-actual API request/response examples from docs/api-reference.md.
+This module contains TypedDict classes that correspond to API request/response
+structures. These are used for type safety and documentation throughout the
+UpGrade client implementation.
 """
 
-from typing import Dict, List, Optional, Any, TypedDict
+from typing import Dict, List, Optional, Any, Union, TypedDict, Literal
+from datetime import datetime
+
 from .enums import (
-    ExperimentState, 
-    ConsistencyRule, 
-    AssignmentUnit, 
-    PostExperimentRule, 
-    AssignmentAlgorithm, 
-    FilterMode, 
+    PostExperimentRule,
+    ExperimentState,
     ExperimentType,
+    AssignmentUnit,
+    ConsistencyRule,
+    FilterMode,
     PayloadType,
-    ConditionOrder,
+    MetricType,
     RepeatedMeasure,
     SegmentType,
-    MetricType,
-    OperationType,
+    ConditionOrder,
+    AssignmentAlgorithm,
     MarkedDecisionPointStatus
 )
 
