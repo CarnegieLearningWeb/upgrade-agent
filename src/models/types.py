@@ -19,7 +19,8 @@ from .enums import (
     RepeatedMeasure,
     SegmentType,
     MetricType,
-    OperationType
+    OperationType,
+    MarkedDecisionPointStatus
 )
 
 
@@ -327,3 +328,79 @@ UpdateExperimentRequest = CreateExperimentRequest
 # Type aliases for common response types
 ExperimentListResponse = List[Experiment]
 ExperimentNamesResponse = List[ExperimentName]
+
+
+# Simulation endpoint types for v6 API
+
+# User initialization types (POST /v6/init)
+class InitExperimentUserRequest(TypedDict):
+    """Request payload for POST /v6/init."""
+    group: Optional[Dict[str, List[str]]]
+    workingGroup: Optional[Dict[str, str]]
+
+
+class InitExperimentUserResponse(TypedDict):
+    """Response from POST /v6/init."""
+    id: str
+    group: Optional[Dict[str, List[str]]]
+    workingGroup: Optional[Dict[str, str]]
+
+
+# Assignment types (POST /v6/assign)
+class ExperimentAssignmentRequest(TypedDict):
+    """Request payload for POST /v6/assign."""
+    context: str
+
+
+class AssignedCondition(TypedDict):
+    """Assigned condition for a user."""
+    conditionCode: str
+    payload: Payload
+    experimentId: Optional[str]
+    id: str
+
+
+class ExperimentAssignment(TypedDict):
+    """Experiment assignment response."""
+    site: str
+    target: str
+    assignedCondition: List[AssignedCondition]
+    assignedFactor: Optional[List[Dict[str, Dict[str, str]]]]  # For factorial experiments
+    experimentType: ExperimentType
+
+
+# Mark endpoint types (POST /v6/mark)
+class MarkAssignedCondition(TypedDict):
+    """Assigned condition data for mark endpoint."""
+    id: Optional[str]
+    conditionCode: Optional[str]
+    experimentId: Optional[str]
+
+
+class MarkData(TypedDict):
+    """Data section for mark request."""
+    site: str
+    target: str
+    assignedCondition: Optional[MarkAssignedCondition]
+
+
+class MarkExperimentRequest(TypedDict):
+    """Request payload for POST /v6/mark."""
+    data: MarkData
+    status: Optional[MarkedDecisionPointStatus]
+    uniquifier: Optional[str]
+    clientError: Optional[str]
+
+
+class MonitoredDecisionPoint(TypedDict):
+    """Response from POST /v6/mark."""
+    id: str
+    userId: str
+    site: str
+    target: str
+    experimentId: str
+    condition: str
+
+
+# Type aliases for simulation endpoints
+ExperimentAssignmentResponse = List[ExperimentAssignment]

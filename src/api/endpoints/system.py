@@ -7,6 +7,7 @@ These functions return raw API responses and match tool function names from tool
 
 from typing import Dict, Any
 from src.api.client import get_client
+from src.models.constants import HEALTH_ENDPOINT, CONTEXT_METADATA_ENDPOINT
 
 
 async def check_upgrade_health() -> Dict[str, Any]:
@@ -24,7 +25,7 @@ async def check_upgrade_health() -> Dict[str, Any]:
         APIError: For network errors or server issues
     """
     client = get_client()
-    return await client.get("/", include_auth=False)
+    return await client.get(HEALTH_ENDPOINT, include_auth=False)
 
 
 async def get_context_metadata() -> Dict[str, Any]:
@@ -44,4 +45,4 @@ async def get_context_metadata() -> Dict[str, Any]:
         AuthenticationError: If authentication token is invalid or missing
     """
     client = get_client()
-    return await client.get("/experiments/contextMetaData")
+    return await client.get(CONTEXT_METADATA_ENDPOINT)

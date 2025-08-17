@@ -7,6 +7,12 @@ These functions return raw API responses and match tool function names from tool
 
 from typing import Dict, Any
 from src.api.client import get_client
+from src.models.constants import (
+    EXPERIMENTS_ENDPOINT,
+    EXPERIMENT_NAMES_ENDPOINT,
+    EXPERIMENT_SINGLE_ENDPOINT,
+    EXPERIMENT_STATE_ENDPOINT
+)
 
 
 async def get_experiment_names() -> Dict[str, Any]:
@@ -21,7 +27,7 @@ async def get_experiment_names() -> Dict[str, Any]:
         AuthenticationError: If authentication token is invalid or missing
     """
     client = get_client()
-    return await client.get("/experiments/names")
+    return await client.get(EXPERIMENT_NAMES_ENDPOINT)
 
 
 async def get_all_experiments() -> Dict[str, Any]:
@@ -36,7 +42,7 @@ async def get_all_experiments() -> Dict[str, Any]:
         AuthenticationError: If authentication token is invalid or missing
     """
     client = get_client()
-    return await client.get("/experiments")
+    return await client.get(EXPERIMENTS_ENDPOINT)
 
 
 async def get_experiment_details(experiment_id: str) -> Dict[str, Any]:
@@ -55,7 +61,7 @@ async def get_experiment_details(experiment_id: str) -> Dict[str, Any]:
         ExperimentNotFoundError: If experiment with given ID doesn't exist
     """
     client = get_client()
-    return await client.get(f"/experiments/single/{experiment_id}")
+    return await client.get(f"{EXPERIMENT_SINGLE_ENDPOINT}/{experiment_id}")
 
 
 async def create_experiment(experiment_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -74,7 +80,7 @@ async def create_experiment(experiment_data: Dict[str, Any]) -> Dict[str, Any]:
         ValidationError: If experiment configuration is invalid
     """
     client = get_client()
-    return await client.post("/experiments", data=experiment_data)
+    return await client.post(EXPERIMENTS_ENDPOINT, data=experiment_data)
 
 
 async def update_experiment(experiment_id: str, experiment_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -94,7 +100,7 @@ async def update_experiment(experiment_id: str, experiment_data: Dict[str, Any])
         ExperimentNotFoundError: If experiment with given ID doesn't exist
     """
     client = get_client()
-    return await client.put(f"/experiments/{experiment_id}", data=experiment_data)
+    return await client.put(f"{EXPERIMENTS_ENDPOINT}/{experiment_id}", data=experiment_data)
 
 
 async def update_experiment_status(experiment_id: str, state: str) -> Dict[str, Any]:
@@ -119,7 +125,7 @@ async def update_experiment_status(experiment_id: str, state: str) -> Dict[str, 
     }
     
     client = get_client()
-    return await client.post("/experiments/state", data=state_request)
+    return await client.post(EXPERIMENT_STATE_ENDPOINT, data=state_request)
 
 
 async def delete_experiment(experiment_id: str) -> Dict[str, Any]:
@@ -138,4 +144,4 @@ async def delete_experiment(experiment_id: str) -> Dict[str, Any]:
         ExperimentNotFoundError: If experiment with given ID doesn't exist
     """
     client = get_client()
-    return await client.delete(f"/experiments/{experiment_id}")
+    return await client.delete(f"{EXPERIMENTS_ENDPOINT}/{experiment_id}")

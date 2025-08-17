@@ -107,3 +107,10 @@ class OperationType(str, Enum):
     MEDIAN = "median"
     STDEV = "stddev"
     PERCENTAGE = "percentage"
+
+
+class MarkedDecisionPointStatus(str, Enum):
+    """Status for marked decision points."""
+    CONDITION_APPLIED = "condition applied"
+    CONDITION_FAILED_TO_APPLY = "condition not applied"
+    NO_CONDITION_ASSIGNED = "no condition assigned"

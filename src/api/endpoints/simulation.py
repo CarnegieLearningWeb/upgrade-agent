@@ -7,6 +7,7 @@ These functions return raw API responses and match tool function names from tool
 
 from typing import Dict, Any
 from src.api.client import get_client
+from src.models.constants import INIT_ENDPOINT, ASSIGN_ENDPOINT, MARK_ENDPOINT
 
 
 async def init_experiment_user(user_id: str, init_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -27,7 +28,7 @@ async def init_experiment_user(user_id: str, init_data: Dict[str, Any]) -> Dict[
         APIError: For network errors or server issues
     """
     client = get_client()
-    return await client.post("/v6/init", data=init_data, user_id=user_id)
+    return await client.post(INIT_ENDPOINT, data=init_data, user_id=user_id)
 
 
 async def get_decision_point_assignments(user_id: str, assignment_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -48,7 +49,7 @@ async def get_decision_point_assignments(user_id: str, assignment_data: Dict[str
         APIError: For network errors or server issues
     """
     client = get_client()
-    return await client.post("/v6/assign", data=assignment_data, user_id=user_id)
+    return await client.post(ASSIGN_ENDPOINT, data=assignment_data, user_id=user_id)
 
 
 async def mark_decision_point(user_id: str, mark_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -69,4 +70,4 @@ async def mark_decision_point(user_id: str, mark_data: Dict[str, Any]) -> Dict[s
         APIError: For network errors or server issues
     """
     client = get_client()
-    return await client.post("/v6/mark", data=mark_data, user_id=user_id)
+    return await client.post(MARK_ENDPOINT, data=mark_data, user_id=user_id)
