@@ -3,9 +3,9 @@ Models package for UpGrade API types and data structures.
 
 This package contains:
 - enums.py: Enumeration types and constants
-- types.py: TypedDict classes for complex data structures  
+- types.py: TypedDict classes for raw API request/response structures  
+- tool_types.py: TypedDict classes for tool-specific simplified types
 - constants.py: Shared constants for HTTP headers and common values
-- requests.py: Request and response model definitions
 """
 
 from .enums import (
@@ -34,7 +34,11 @@ from .types import (
     ContextMetadata,
     ContextMetadataResponse,
     ExperimentName,
+    EnrollmentCompleteCondition,
+    StratificationFactor,
     Payload,
+    Level,
+    LevelCombinationElement,
     ConditionPayload,
     ConditionPayloadWithParent,
     Condition,
@@ -47,6 +51,9 @@ from .types import (
     ExperimentSegment,
     StateTimeLog,
     Experiment,
+    CreateLevel,
+    CreateFactor,
+    CreateLevelCombinationElement,
     CreateCondition,
     CreateConditionPayload,
     CreatePartition,
@@ -61,6 +68,40 @@ from .types import (
     UpdateExperimentRequest,
     ExperimentListResponse,
     ExperimentNamesResponse,
+    InitExperimentUserRequest,
+    InitExperimentUserResponse,
+    ExperimentAssignmentRequest,
+    AssignedCondition,
+    ExperimentAssignment,
+    MarkAssignedCondition,
+    MarkData,
+    MarkExperimentRequest,
+    MonitoredDecisionPoint,
+    ExperimentAssignmentResponse,
+)
+
+from .tool_types import (
+    # Simplified API Response Types (some are aliases to types.py)
+    ToolHealthResponse,
+    ToolContextMetadata,
+    ToolExperimentName,
+    
+    # Tool-Specific Domain Types
+    DecisionPoint,
+    Condition as ToolCondition,
+    InclusionExclusionGroup,
+    ToolPostExperimentRule,
+    SimplifiedExperiment,
+    
+    # Tool Workflow Types
+    DecisionPointData,
+    AssignedConditionData,
+    
+    # Tool State Management Types
+    ToolActionType,
+    ToolErrorType,
+    ToolExecutionResult,
+    GatheredInfo,
 )
 
 __all__ = [
@@ -79,12 +120,16 @@ __all__ = [
     "MetricType",
     "OperationType",
     
-    # Types
+    # Raw API Types
     "HealthResponse",
     "ContextMetadata",
     "ContextMetadataResponse",
     "ExperimentName",
+    "EnrollmentCompleteCondition",
+    "StratificationFactor",
     "Payload",
+    "Level",
+    "LevelCombinationElement",
     "ConditionPayload",
     "ConditionPayloadWithParent",
     "Condition",
@@ -97,6 +142,9 @@ __all__ = [
     "ExperimentSegment",
     "StateTimeLog",
     "Experiment",
+    "CreateLevel",
+    "CreateFactor",
+    "CreateLevelCombinationElement",
     "CreateCondition",
     "CreateConditionPayload",
     "CreatePartition",
@@ -111,6 +159,48 @@ __all__ = [
     "UpdateExperimentRequest",
     "ExperimentListResponse",
     "ExperimentNamesResponse",
+    "InitExperimentUserRequest",
+    "InitExperimentUserResponse",
+    "ExperimentAssignmentRequest",
+    "AssignedCondition",
+    "ExperimentAssignment",
+    "MarkAssignedCondition",
+    "MarkData",
+    "MarkExperimentRequest",
+    "MonitoredDecisionPoint",
+    "ExperimentAssignmentResponse",
+    
+    # Tool Types - Simplified API Response Types
+    "ToolHealthResponse",
+    "ToolContextMetadata",
+    "ToolExperimentName",
+    
+    # Tool Types - Domain Types
+    "DecisionPoint",
+    "ToolCondition",
+    "InclusionExclusionGroup",
+    "ToolPostExperimentRule",
+    "SimplifiedExperiment",
+    
+    # Tool Types - Parameter Types
+    "ConditionConfig",
+    "PartitionConfig",
+    "CreateExperimentParams",
+    "UpdateExperimentStatusParams",
+    "InitUserParams",
+    
+    # Tool Types - Workflow Types
+    "AssignmentParams",
+    "DecisionPointData",
+    "AssignedConditionData",
+    "MarkDecisionPointParams",
+    
+    # Tool Types - State Management
+    "ToolActionType",
+    "ToolErrorType",
+    "ToolExecutionResult",
+    "GatheredInfo",
+    
     # HTTP Constants
     "CONTENT_TYPE_JSON",
     "ACCEPT_JSON",

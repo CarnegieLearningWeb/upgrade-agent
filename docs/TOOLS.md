@@ -778,13 +778,6 @@ def mark_decision_point(**params) -> Dict:
     """POST /v6/mark - Record decision point visits"""
 ```
 
-#### Utility Workflows
-
-```python
-def visit_decision_point(**params) -> Dict:
-    """Compound workflow: init → assign → mark in sequence"""
-```
-
 ### 5. Response Generator Tools (`/tools/response/`)
 
 **Purpose**: Format responses and access state data for user communication
@@ -826,21 +819,21 @@ def get_errors() -> Dict[str, str]:
 ## Type Definitions
 
 ```python
-# /tools/types.py
+# /models/tool_types.py
 from typing import TypedDict, List, Optional, Literal, Dict, Any
 
-class HealthCheckData(TypedDict):
+class ToolHealthResponse(TypedDict):
     name: str
     version: str
     description: str
 
-class ContextMetadata(TypedDict):
+class ToolContextMetadata(TypedDict):
     conditions: List[str]
     group_types: List[str]
     sites: List[str]
     targets: List[str]
 
-class ExperimentName(TypedDict):
+class ToolExperimentName(TypedDict):
     id: str
     name: str
 
@@ -857,7 +850,7 @@ class InclusionExclusionGroup(TypedDict):
     type: str
     group_id: str
 
-class PostExperimentRule(TypedDict):
+class ToolPostExperimentRule(TypedDict):
     rule: Literal["continue", "assign"]
     condition_code: str  # "None", "default", or condition_code
 
@@ -883,42 +876,6 @@ class SimplifiedExperiment(TypedDict):
     exclusion_users: List[str]
     exclusion_groups: List[InclusionExclusionGroup]
 
-class ConditionConfig(TypedDict):
-    id: str
-    conditionCode: str
-    assignmentWeight: int
-    description: Optional[str]
-    order: int
-    name: str
-
-class PartitionConfig(TypedDict):
-    id: str
-    site: str
-    target: str
-    description: str
-    order: int
-    excludeIfReached: bool
-
-class CreateExperimentParams(TypedDict):
-    name: str
-    description: str
-    context: List[str]
-    conditions: List[ConditionConfig]
-    partitions: List[PartitionConfig]
-    # ... additional fields
-
-class UpdateExperimentStatusParams(TypedDict):
-    experimentId: str
-    state: Literal["inactive", "preview", "scheduled", "enrolling", "enrollmentComplete", "cancelled", "archived"]
-
-class InitUserParams(TypedDict):
-    user_id: str
-    group: Optional[Dict[str, List[str]]]
-    workingGroup: Optional[Dict[str, str]]
-
-class AssignmentParams(TypedDict):
-    context: str
-
 class DecisionPointData(TypedDict):
     site: str
     target: str
@@ -927,9 +884,7 @@ class AssignedConditionData(TypedDict):
     condition_code: str
     experiment_id: str
 
-class MarkDecisionPointParams(TypedDict):
-    decision_point: DecisionPointData
-    assigned_condition: AssignedConditionData
+# More types might be needed as we implement the tools
 ```
 
 ## Decorators and Utilities

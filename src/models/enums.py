@@ -114,3 +114,33 @@ class MarkedDecisionPointStatus(str, Enum):
     CONDITION_APPLIED = "condition applied"
     CONDITION_FAILED_TO_APPLY = "condition not applied"
     NO_CONDITION_ASSIGNED = "no condition assigned"
+
+
+class ToolActionType(str, Enum):
+    """Types of actions that can be executed by the Tool Executor."""
+    CREATE_EXPERIMENT = "create_experiment"
+    UPDATE_EXPERIMENT = "update_experiment"
+    UPDATE_EXPERIMENT_STATUS = "update_experiment_status"
+    DELETE_EXPERIMENT = "delete_experiment"
+    INIT_EXPERIMENT_USER = "init_experiment_user"
+    GET_DECISION_POINT_ASSIGNMENTS = "get_decision_point_assignments"
+    MARK_DECISION_POINT = "mark_decision_point"
+
+
+class ToolErrorType(str, Enum):
+    """Types of errors that can occur in tool execution."""
+    API = "api"
+    AUTH = "auth"
+    VALIDATION = "validation"
+    NOT_FOUND = "not_found"
+    UNKNOWN = "unknown"
+    GATHERING = "gathering"
+
+
+class NodeType(str, Enum):
+    """Node types in the LangGraph architecture."""
+    CONVERSATION_ANALYZER = "conversation_analyzer"
+    INFORMATION_GATHERER = "information_gatherer"
+    CONFIRMATION_HANDLER = "confirmation_handler"
+    TOOL_EXECUTOR = "tool_executor"
+    RESPONSE_GENERATOR = "response_generator"
