@@ -12,7 +12,7 @@ Tool types are organized by their usage:
 - Tool Workflow Types: Types for multi-step tool workflows
 """
 
-from typing import Dict, List, Optional, Any, TypedDict, Literal
+from typing import Dict, List, Optional, Any, TypedDict, NotRequired
 from .enums import (
     PostExperimentRule as PostExperimentRuleEnum,
     ExperimentState,
@@ -51,6 +51,35 @@ class ToolContextMetadata(TypedDict):
     group_types: List[str]
     sites: List[str]  
     targets: List[str]
+
+
+class ToolInitExperimentUserResponse(TypedDict):
+    """Response from init_experiment_user tool."""
+    user_id: str
+    group: NotRequired[Optional[Dict[str, List[str]]]]
+    working_group: NotRequired[Optional[Dict[str, str]]]
+
+
+class ToolAssignedCondition(TypedDict):
+    """Assigned condition for a user."""
+    condition_code: str
+    experiment_id: Optional[str]
+
+
+class ToolExperimentAssignment(TypedDict):
+    """Single experiment assignment for a decision point."""
+    site: str
+    target: str
+    assigned_conditions: List[ToolAssignedCondition]
+
+
+class ToolMarkExperimentResponse(TypedDict):
+    """Response from mark_decision_point tool."""
+    user_id: str
+    site: str
+    target: str
+    experiment_id: Optional[str]
+    condition_code: Optional[str]
 
 
 # ============================================================================
@@ -99,7 +128,7 @@ class SimplifiedExperiment(TypedDict):
     context: str
     type: ExperimentType
     assignment_unit: AssignmentUnit
-    group_type: str  # "None" or actual group type like "schoolId"
+    group_type: Optional[str]  # None, or actual group type like "schoolId"
     consistency_rule: ConsistencyRule
     post_experiment_rule: ToolPostExperimentRule
     decision_points: List[DecisionPoint]

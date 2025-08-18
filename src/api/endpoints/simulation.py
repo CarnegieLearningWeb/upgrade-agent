@@ -5,7 +5,7 @@ Simple wrapper functions that directly call API endpoints listed in README.md.
 These functions return raw API responses and match tool function names from tools.md.
 """
 
-from typing import Dict, Any, Union
+from typing import Dict, Any, Union, List
 from src.api.client import get_client
 from src.models.constants import INIT_ENDPOINT, ASSIGN_ENDPOINT, MARK_ENDPOINT
 from src.models.types import (
@@ -54,13 +54,15 @@ async def get_decision_point_assignments(user_id: str, assignment_data: Union[Ex
         assignment_data: Assignment request data containing context and optional filters
         
     Returns:
-        List of experiment assignments with conditions and payloads
+        Dict containing 'data' key with list of experiment assignments
         
     Raises:
         APIError: For network errors or server issues
     """
     client = get_client()
-    return await client.post(ASSIGN_ENDPOINT, data=_to_dict(assignment_data), user_id=user_id)
+    response = await client.post(ASSIGN_ENDPOINT, data=_to_dict(assignment_data), user_id=user_id)
+    # Wrap the list response in a consistent dictionary format
+    return {"data": response}
 
 
 async def mark_decision_point(user_id: str, mark_data: Union[MarkExperimentRequest, Dict[str, Any]]) -> Dict[str, Any]:

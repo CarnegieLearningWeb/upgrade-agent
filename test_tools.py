@@ -358,23 +358,44 @@ class ToolTester:
                 self.log_test("get_decision_point_assignments", params, response)
                 
                 # Store assigned condition for mark_decision_point test
+                # Response structure: Now returns List[ToolExperimentAssignment]
+                # Each ToolExperimentAssignment has {site, target, assigned_conditions: List[ToolAssignedCondition]}
+                # Each ToolAssignedCondition has {condition_code, experiment_id}
                 if response and isinstance(response, list) and len(response) > 0:
-                    for assignment in response:
-                        if isinstance(assignment, dict) and 'assignedCondition' in assignment:
-                            assigned_condition = assignment.get('assignedCondition')
-                            # assignedCondition might be a list, so handle both cases
-                            if isinstance(assigned_condition, list) and len(assigned_condition) > 0:
-                                # Look for experiment_id in the list items
-                                for condition in assigned_condition:
-                                    if (isinstance(condition, dict) and 
-                                        condition.get('experimentId') == self.created_experiment_id):
-                                        self.assigned_condition = condition
-                                        print(f"📝 Stored assigned condition: {self.assigned_condition}")
-                                        break
-                            elif isinstance(assigned_condition, dict) and assigned_condition.get('experiment_id') == self.created_experiment_id:
-                                self.assigned_condition = assigned_condition
-                                print(f"📝 Stored assigned condition: {self.assigned_condition}")
-                                break
+                    # Take the first assignment from the list
+                    first_assignment = response[0]
+                    assigned_conditions = first_assignment.get('assigned_conditions', [])
+                    
+                    # Look for a condition that matches our created experiment
+                    for condition in assigned_conditions:
+                        if (isinstance(condition, dict) and 
+                            condition.get('experiment_id') == self.created_experiment_id):
+                            self.assigned_condition = condition
+                            print(f"📝 Stored assigned condition: {self.assigned_condition}")
+                            break
+                    
+                    # If we didn't find a matching condition, use the first one as fallback
+                    if not self.assigned_condition and assigned_conditions:
+                        self.assigned_condition = assigned_conditions[0]
+                        print(f"📝 No matching experiment_id found, using first assigned condition: {self.assigned_condition}")
+                        
+                    # Store site and target from the assignment for mark_decision_point
+                    if not self.created_experiment_site:
+                        self.created_experiment_site = first_assignment.get('site')
+                        print(f"📝 Updated experiment site from assignment: {self.created_experiment_site}")
+                    if not self.created_experiment_target:
+                        self.created_experiment_target = first_assignment.get('target')
+                        print(f"📝 Updated experiment target from assignment: {self.created_experiment_target}")
+                else:
+                    print("⚠️  Response structure check failed:")
+                    print(f"    response is not None: {response is not None}")
+                    print(f"    response is list: {isinstance(response, list)}")
+                    if isinstance(response, list):
+                        print(f"    response length: {len(response)}")
+                        if len(response) > 0:
+                            print(f"    first item type: {type(response[0])}")
+                            print(f"    first item keys: {list(response[0].keys()) if isinstance(response[0], dict) else 'not a dict'}")
+                    print(f"    actual response: {response}")
                             
             except Exception as e:
                 self.log_test("get_decision_point_assignments", params, None, e)
@@ -382,7 +403,7 @@ class ToolTester:
             print("\n⚠️  Skipping get_decision_point_assignments - no experiment context available")
         
         # 7. Test mark_decision_point (if we have all required data)
-        if (self.created_experiment_site and self.created_experiment_target and self.assigned_condition):
+        if (self.created_experiment_site and self.created_experiment_target):
             action_params = {
                 "user_id": "tool_test_user1",
                 "decision_point": {

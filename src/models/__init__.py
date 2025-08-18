@@ -73,11 +73,11 @@ from .types import (
     ExperimentAssignmentRequest,
     AssignedCondition,
     ExperimentAssignment,
+    ExperimentAssignmentResponse,
     MarkAssignedCondition,
     MarkData,
     MarkExperimentRequest,
-    MonitoredDecisionPoint,
-    ExperimentAssignmentResponse,
+    MarkExperimentResponse,
 )
 
 from .tool_types import (
@@ -85,6 +85,10 @@ from .tool_types import (
     ToolHealthResponse,
     ToolContextMetadata,
     ToolExperimentName,
+    ToolInitExperimentUserResponse,
+    ToolAssignedCondition,
+    ToolExperimentAssignment,
+    ToolMarkExperimentResponse,
     
     # Tool-Specific Domain Types
     DecisionPoint,
@@ -164,16 +168,20 @@ __all__ = [
     "ExperimentAssignmentRequest",
     "AssignedCondition",
     "ExperimentAssignment",
+    "ExperimentAssignmentResponse",
     "MarkAssignedCondition",
     "MarkData",
     "MarkExperimentRequest",
-    "MonitoredDecisionPoint",
-    "ExperimentAssignmentResponse",
+    "MarkExperimentResponse",
     
     # Tool Types - Simplified API Response Types
     "ToolHealthResponse",
     "ToolContextMetadata",
     "ToolExperimentName",
+    "ToolInitExperimentUserResponse",
+    "ToolAssignedCondition",
+    "ToolExperimentAssignment",
+    "ToolMarkExperimentResponse",
     
     # Tool Types - Domain Types
     "DecisionPoint",

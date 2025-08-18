@@ -6,10 +6,7 @@ structures. These are used for type safety and documentation throughout the
 UpGrade client implementation.
 """
 
-from typing import Dict, List, Optional, Any, Union, TypedDict, Literal
-from datetime import datetime
-from typing import NotRequired
-
+from typing import Dict, List, Optional, Any, TypedDict, NotRequired
 from .enums import (
     PostExperimentRule,
     ExperimentState,
@@ -415,7 +412,7 @@ class AssignedCondition(TypedDict):
 
 
 class ExperimentAssignment(TypedDict):
-    """Experiment assignment response."""
+    """Single experiment assignment for a decision point."""
     site: str
     target: str
     assignedCondition: List[AssignedCondition]
@@ -423,12 +420,17 @@ class ExperimentAssignment(TypedDict):
     experimentType: ExperimentType
 
 
+class ExperimentAssignmentResponse(TypedDict):
+    """Response from POST /v6/assign containing list of experiment assignments."""
+    data: List[ExperimentAssignment]
+
+
 # Mark endpoint types (POST /v6/mark)
 class MarkAssignedCondition(TypedDict):
     """Assigned condition data for mark endpoint."""
-    id: Optional[str]
-    conditionCode: Optional[str]
-    experimentId: Optional[str]
+    id: NotRequired[Optional[str]]
+    conditionCode: NotRequired[Optional[str]]
+    experimentId: NotRequired[Optional[str]]
 
 
 class MarkData(TypedDict):
@@ -446,15 +448,11 @@ class MarkExperimentRequest(TypedDict):
     clientError: NotRequired[Optional[str]]
 
 
-class MonitoredDecisionPoint(TypedDict):
+class MarkExperimentResponse(TypedDict):
     """Response from POST /v6/mark."""
     id: str
     userId: str
     site: str
     target: str
-    experimentId: str
-    condition: str
-
-
-# Type aliases for simulation endpoints
-ExperimentAssignmentResponse = List[ExperimentAssignment]
+    experimentId: Optional[str]
+    condition: Optional[str]

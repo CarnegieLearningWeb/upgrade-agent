@@ -235,7 +235,7 @@ def _transform_experiment_data(experiment: Experiment) -> Dict[str, Any]:
     # Extract post experiment rule
     post_experiment_rule = {
         "rule": getattr(experiment, 'postExperimentRule', 'continue'),
-        "condition_code": getattr(experiment, 'revertTo', None) or "None"
+        "condition_code": getattr(experiment, 'revertTo') # should convert revertTo (conditon ID) to conditonCode
     }
     
     return {
@@ -246,10 +246,10 @@ def _transform_experiment_data(experiment: Experiment) -> Dict[str, Any]:
         "name": experiment.name,
         "description": getattr(experiment, 'description', ''),
         "tags": getattr(experiment, 'tags', []),
-        "context": experiment.context[0] if experiment.context else None,  # Single context
+        "context": experiment.context[0]
         "type": getattr(experiment, 'type', 'Simple'),
         "assignment_unit": getattr(experiment, 'assignmentUnit', 'individual'),
-        "group_type": getattr(experiment, 'group', None) or "None",
+        "group_type": getattr(experiment, 'group', None),
         "consistency_rule": getattr(experiment, 'consistencyRule', 'individual'),
         "post_experiment_rule": post_experiment_rule,
         "decision_points": decision_points,
