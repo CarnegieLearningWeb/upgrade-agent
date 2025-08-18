@@ -10,6 +10,7 @@ from typing import Dict, Any, List
 
 from src.tools.decorators import auto_store
 from src.tools.registry import register_gatherer_tool
+from src.api.endpoints import get_context_metadata as api_get_context_metadata
 
 
 @tool
@@ -254,30 +255,26 @@ def get_mark_decision_point_schema() -> Dict[str, Any]:
 @tool
 @register_gatherer_tool("get_available_contexts")
 @auto_store("available_contexts")
-def get_available_contexts() -> List[str]:
+async def get_available_contexts() -> List[str]:
     """Get list of available context names."""
-    # This will use context_metadata when available
-    from src.tools.decorators import _state_ref
-    
-    if _state_ref and 'context_metadata' in _state_ref:
-        return list(_state_ref['context_metadata'].keys())
-    
-    # Fallback to common contexts if metadata not loaded
-    return ["assign-prog", "mastering", "other"]
+    try:
+        response = await api_get_context_metadata()
+        context_metadata = response.get("contextMetadata", {})
+        return list(context_metadata.keys())
+    except Exception as e:
+        raise RuntimeError(f"Failed to get available contexts: {str(e)}")
 
 
 @tool
 @register_gatherer_tool("get_conditions_for_context")
-def get_conditions_for_context(context: str) -> List[str]:
+async def get_conditions_for_context(context: str) -> List[str]:
     """Get available conditions for a specific context."""
-    from src.tools.decorators import _state_ref
-    
     if not context or not context.strip():
         raise ValueError("context is required and cannot be empty")
     
-    # Check if context metadata is available
-    if _state_ref and 'context_metadata' in _state_ref:
-        context_metadata = _state_ref['context_metadata']
+    try:
+        response = await api_get_context_metadata()
+        context_metadata = response.get("contextMetadata", {})
         
         # Validate context exists
         if context not in context_metadata:
@@ -285,12 +282,15 @@ def get_conditions_for_context(context: str) -> List[str]:
             raise ValueError(f"Context '{context}' not found. Available contexts: {available_contexts}")
         
         context_data = context_metadata.get(context, {})
-        conditions = context_data.get('conditions', [])
-    else:
-        # No metadata available
-        raise RuntimeError("Context metadata not available. Call get_context_metadata() first.")
+        conditions = context_data.get('CONDITIONS', [])  # API uses uppercase keys
+    except ValueError:
+        # Re-raise validation errors as-is
+        raise
+    except Exception as e:
+        raise RuntimeError(f"Failed to get conditions for context '{context}': {str(e)}")
     
     # Auto-store with dynamic key
+    from src.tools.decorators import _state_ref
     if _state_ref:
         if "gathered_info" not in _state_ref:
             _state_ref["gathered_info"] = {}
@@ -301,15 +301,14 @@ def get_conditions_for_context(context: str) -> List[str]:
 
 @tool
 @register_gatherer_tool("get_decision_points_for_context")
-def get_decision_points_for_context(context: str) -> List[Dict[str, str]]:
+async def get_decision_points_for_context(context: str) -> List[Dict[str, str]]:
     """Get available decision points (sites/targets) for a specific context."""
-    from src.tools.decorators import _state_ref
-    
     if not context or not context.strip():
         raise ValueError("context is required and cannot be empty")
     
-    if _state_ref and 'context_metadata' in _state_ref:
-        context_metadata = _state_ref['context_metadata']
+    try:
+        response = await api_get_context_metadata()
+        context_metadata = response.get("contextMetadata", {})
         
         # Validate context exists
         if context not in context_metadata:
@@ -317,19 +316,22 @@ def get_decision_points_for_context(context: str) -> List[Dict[str, str]]:
             raise ValueError(f"Context '{context}' not found. Available contexts: {available_contexts}")
             
         context_data = context_metadata.get(context, {})
-        sites = context_data.get('sites', [])
-        targets = context_data.get('targets', [])
+        sites = context_data.get('EXP_POINTS', [])    # API uses EXP_POINTS for sites
+        targets = context_data.get('EXP_IDS', [])     # API uses EXP_IDS for targets
         
         # Combine sites and targets into decision points
         decision_points = []
         for site in sites:
             for target in targets:
                 decision_points.append({"site": site, "target": target})
-    else:
-        # No metadata available
-        raise RuntimeError("Context metadata not available. Call get_context_metadata() first.")
+    except ValueError:
+        # Re-raise validation errors as-is
+        raise
+    except Exception as e:
+        raise RuntimeError(f"Failed to get decision points for context '{context}': {str(e)}")
     
     # Auto-store with dynamic key
+    from src.tools.decorators import _state_ref
     if _state_ref:
         if "gathered_info" not in _state_ref:
             _state_ref["gathered_info"] = {}
@@ -340,15 +342,14 @@ def get_decision_points_for_context(context: str) -> List[Dict[str, str]]:
 
 @tool
 @register_gatherer_tool("get_group_types_for_context")
-def get_group_types_for_context(context: str) -> List[str]:
+async def get_group_types_for_context(context: str) -> List[str]:
     """Get available group types for a specific context."""
-    from src.tools.decorators import _state_ref
-    
     if not context or not context.strip():
         raise ValueError("context is required and cannot be empty")
     
-    if _state_ref and 'context_metadata' in _state_ref:
-        context_metadata = _state_ref['context_metadata']
+    try:
+        response = await api_get_context_metadata()
+        context_metadata = response.get("contextMetadata", {})
         
         # Validate context exists
         if context not in context_metadata:
@@ -356,12 +357,15 @@ def get_group_types_for_context(context: str) -> List[str]:
             raise ValueError(f"Context '{context}' not found. Available contexts: {available_contexts}")
             
         context_data = context_metadata.get(context, {})
-        group_types = context_data.get('group_types', [])
-    else:
-        # No metadata available
-        raise RuntimeError("Context metadata not available. Call get_context_metadata() first.")
+        group_types = context_data.get('GROUP_TYPES', [])  # API uses uppercase keys
+    except ValueError:
+        # Re-raise validation errors as-is
+        raise
+    except Exception as e:
+        raise RuntimeError(f"Failed to get group types for context '{context}': {str(e)}")
     
     # Auto-store with dynamic key
+    from src.tools.decorators import _state_ref
     if _state_ref:
         if "gathered_info" not in _state_ref:
             _state_ref["gathered_info"] = {}

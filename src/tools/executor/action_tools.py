@@ -7,7 +7,7 @@ log all executions in the execution_log.
 """
 
 from langchain.tools import tool
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any, Optional, Union
 from uuid import uuid4
 from datetime import datetime
 
@@ -38,7 +38,7 @@ from src.models.enums import (
 )
 
 
-def _log_execution(action: str, success: bool, result: Any = None, error: str = None):
+def _log_execution(action: str, success: bool, result: Any = None, error: Optional[str] = None):
     """Log tool execution to the execution_log."""
     from src.tools.decorators import _state_ref
     if _state_ref is None:
@@ -65,10 +65,10 @@ def _validate_required_params(params: Dict[str, Any], required_keys: List[str]):
 
 
 def _create_experiment_segment(
-    inclusion_users: List[str] = None,
-    inclusion_groups: List[Dict[str, str]] = None,
-    exclusion_users: List[str] = None,
-    exclusion_groups: List[Dict[str, str]] = None,
+    inclusion_users: Optional[List[str]] = None,
+    inclusion_groups: Optional[List[Dict[str, str]]] = None,
+    exclusion_users: Optional[List[str]] = None,
+    exclusion_groups: Optional[List[Dict[str, str]]] = None,
     is_inclusion: bool = True
 ) -> CreateExperimentSegment:
     """
@@ -294,7 +294,7 @@ def _convert_experiment_segment_to_create_segment(exp_segment: ExperimentSegment
     return CreateExperimentSegment(segment=create_segment)
 
 
-def _convert_experiment_to_create_request(experiment: Experiment) -> CreateExperimentRequest:
+def _convert_experiment_to_create_request(experiment: Union[Experiment, Dict[str, Any]]) -> CreateExperimentRequest:
     """
     Convert API response Experiment to CreateExperimentRequest format.
     
@@ -322,35 +322,29 @@ def _convert_experiment_to_create_request(experiment: Experiment) -> CreateExper
         'description': experiment['description'],
         'consistencyRule': experiment['consistencyRule'],
         'assignmentUnit': experiment['assignmentUnit'],
-        'group': experiment.get('group'),
-        'conditionOrder': experiment.get('conditionOrder'),
         'type': experiment['type'],
         'context': experiment['context'],
         'assignmentAlgorithm': experiment['assignmentAlgorithm'],
-        'stratificationFactor': experiment.get('stratificationFactor'),
         'tags': experiment['tags'],
         'conditions': conditions,
-        'conditionPayloads': experiment.get('conditionPayloads', []),
         'partitions': partitions,
         'experimentSegmentInclusion': inclusion_segment,
         'experimentSegmentExclusion': exclusion_segment,
         'filterMode': experiment['filterMode'],
-        'factors': experiment.get('factors', []),
-        'queries': experiment.get('queries', []),
-        'endOn': experiment.get('endOn'),
-        'enrollmentCompleteCondition': experiment.get('enrollmentCompleteCondition'),
-        'startOn': experiment.get('startOn'),
         'state': experiment['state'],
-        'postExperimentRule': experiment['postExperimentRule'],
-        'revertTo': experiment.get('revertTo')
+        'postExperimentRule': experiment['postExperimentRule']
     }
     
-    # Only include optional specialized fields if they exist and have values
-    if 'moocletPolicyParameters' in experiment and experiment['moocletPolicyParameters'] is not None:
-        request['moocletPolicyParameters'] = experiment['moocletPolicyParameters']
-    
-    if 'rewardMetricKey' in experiment and experiment['rewardMetricKey'] is not None:
-        request['rewardMetricKey'] = experiment['rewardMetricKey']
+    # Only include optional fields if they exist and have values
+    optional_fields = [
+        'group', 'conditionOrder', 'stratificationFactor', 'conditionPayloads',
+        'factors', 'queries', 'endOn', 'enrollmentCompleteCondition', 
+        'startOn', 'revertTo', 'moocletPolicyParameters', 'rewardMetricKey'
+    ]
+
+    for field in optional_fields:
+        if field in experiment and experiment[field] is not None:
+            request[field] = experiment[field]
     
     return request
 
@@ -415,16 +409,16 @@ def _apply_segments_update(
     """Apply segment updates (inclusion/exclusion)."""
     if any(key in action_params for key in ['inclusion_users', 'inclusion_groups']):
         inclusion_segment = _create_experiment_segment(
-            inclusion_users=action_params.get('inclusion_users'),
-            inclusion_groups=action_params.get('inclusion_groups'),
+            inclusion_users=action_params.get('inclusion_users', []),
+            inclusion_groups=action_params.get('inclusion_groups', []),
             is_inclusion=True
         )
         updated_request['experimentSegmentInclusion'] = inclusion_segment
         
     if any(key in action_params for key in ['exclusion_users', 'exclusion_groups']):
         exclusion_segment = _create_experiment_segment(
-            exclusion_users=action_params.get('exclusion_users'),
-            exclusion_groups=action_params.get('exclusion_groups'),
+            exclusion_users=action_params.get('exclusion_users', []),
+            exclusion_groups=action_params.get('exclusion_groups', []),
             is_inclusion=False
         )
         updated_request['experimentSegmentExclusion'] = exclusion_segment
@@ -713,7 +707,7 @@ async def get_decision_point_assignments(action_params: Dict[str, Any]) -> Dict[
     Get decision point assignments for a user.
     
     Required parameters in action_params:
-    - user_id: string (passed as header)
+    - user_id: string
     - context: string
     
     Returns:
@@ -743,7 +737,7 @@ async def mark_decision_point(action_params: Dict[str, Any]) -> Dict[str, Any]:
     Mark decision point as visited.
     
     Required parameters in action_params:
-    - user_id: string (passed as header)
+    - user_id: string
     - decision_point: dict with site and target
     - assigned_condition: dict with condition_code and experiment_id
     
@@ -759,13 +753,11 @@ async def mark_decision_point(action_params: Dict[str, Any]) -> Dict[str, Any]:
         assigned_condition = action_params['assigned_condition']
         
         # Build MarkAssignedCondition
-        mark_assigned_condition: MarkAssignedCondition = {}
-        if 'condition_code' in assigned_condition:
-            mark_assigned_condition['conditionCode'] = assigned_condition['condition_code']
-        if 'experiment_id' in assigned_condition:
-            mark_assigned_condition['experimentId'] = assigned_condition['experiment_id']
-        if 'id' in assigned_condition:
-            mark_assigned_condition['id'] = assigned_condition['id']
+        mark_assigned_condition: MarkAssignedCondition = {
+            'id': assigned_condition.get('id'),
+            'conditionCode': assigned_condition.get('condition_code'),
+            'experimentId': assigned_condition.get('experiment_id')
+        }
         
         # Build MarkData
         mark_data: MarkData = {

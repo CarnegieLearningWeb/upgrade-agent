@@ -79,7 +79,7 @@ class InclusionExclusionGroup(TypedDict):
 class ToolPostExperimentRule(TypedDict):
     """Tool representation of post-experiment rules."""
     rule: PostExperimentRuleEnum
-    condition_code: str  # "None", "default", or condition_code
+    condition_code: Optional[str]  # None, or actual condition_code
 
 
 class SimplifiedExperiment(TypedDict):

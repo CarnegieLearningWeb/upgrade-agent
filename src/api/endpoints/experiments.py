@@ -5,7 +5,7 @@ Simple wrapper functions that directly call API endpoints listed in README.md.
 These functions return raw API responses and match tool function names from tools.md.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Union
 from src.api.client import get_client
 from src.models.constants import (
     EXPERIMENTS_ENDPOINT,
@@ -13,6 +13,13 @@ from src.models.constants import (
     EXPERIMENT_SINGLE_ENDPOINT,
     EXPERIMENT_STATE_ENDPOINT
 )
+from src.models.types import CreateExperimentRequest
+
+
+def _to_dict(data: Union[Dict[str, Any], CreateExperimentRequest]) -> Dict[str, Any]:
+    """Convert typed data to dictionary format for API calls."""
+    # TypedDict is a dict at runtime, so we can safely cast it
+    return dict(data)
 
 
 async def get_experiment_names() -> Dict[str, Any]:
@@ -64,7 +71,7 @@ async def get_experiment_details(experiment_id: str) -> Dict[str, Any]:
     return await client.get(f"{EXPERIMENT_SINGLE_ENDPOINT}/{experiment_id}")
 
 
-async def create_experiment(experiment_data: Dict[str, Any]) -> Dict[str, Any]:
+async def create_experiment(experiment_data: Union[CreateExperimentRequest, Dict[str, Any]]) -> Dict[str, Any]:
     """
     POST /experiments - Create a new experiment.
     
@@ -80,10 +87,10 @@ async def create_experiment(experiment_data: Dict[str, Any]) -> Dict[str, Any]:
         ValidationError: If experiment configuration is invalid
     """
     client = get_client()
-    return await client.post(EXPERIMENTS_ENDPOINT, data=experiment_data)
+    return await client.post(EXPERIMENTS_ENDPOINT, data=_to_dict(experiment_data))
 
 
-async def update_experiment(experiment_id: str, experiment_data: Dict[str, Any]) -> Dict[str, Any]:
+async def update_experiment(experiment_id: str, experiment_data: Union[CreateExperimentRequest, Dict[str, Any]]) -> Dict[str, Any]:
     """
     PUT /experiments/<experiment_id> - Update experiment configuration.
     
@@ -100,7 +107,7 @@ async def update_experiment(experiment_id: str, experiment_data: Dict[str, Any])
         ExperimentNotFoundError: If experiment with given ID doesn't exist
     """
     client = get_client()
-    return await client.put(f"{EXPERIMENTS_ENDPOINT}/{experiment_id}", data=experiment_data)
+    return await client.put(f"{EXPERIMENTS_ENDPOINT}/{experiment_id}", data=_to_dict(experiment_data))
 
 
 async def update_experiment_status(experiment_id: str, state: str) -> Dict[str, Any]:

@@ -5,12 +5,23 @@ Simple wrapper functions that directly call API endpoints listed in README.md.
 These functions return raw API responses and match tool function names from tools.md.
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, Union
 from src.api.client import get_client
 from src.models.constants import INIT_ENDPOINT, ASSIGN_ENDPOINT, MARK_ENDPOINT
+from src.models.types import (
+    InitExperimentUserRequest,
+    ExperimentAssignmentRequest, 
+    MarkExperimentRequest
+)
 
 
-async def init_experiment_user(user_id: str, init_data: Dict[str, Any]) -> Dict[str, Any]:
+def _to_dict(data: Union[Dict[str, Any], InitExperimentUserRequest, ExperimentAssignmentRequest, MarkExperimentRequest]) -> Dict[str, Any]:
+    """Convert typed data to dictionary format for API calls."""
+    # TypedDict is a dict at runtime, so we can safely cast it
+    return dict(data)
+
+
+async def init_experiment_user(user_id: str, init_data: Union[InitExperimentUserRequest, Dict[str, Any]]) -> Dict[str, Any]:
     """
     POST /v6/init - Initialize users with group memberships.
     
@@ -28,10 +39,10 @@ async def init_experiment_user(user_id: str, init_data: Dict[str, Any]) -> Dict[
         APIError: For network errors or server issues
     """
     client = get_client()
-    return await client.post(INIT_ENDPOINT, data=init_data, user_id=user_id)
+    return await client.post(INIT_ENDPOINT, data=_to_dict(init_data), user_id=user_id)
 
 
-async def get_decision_point_assignments(user_id: str, assignment_data: Dict[str, Any]) -> Dict[str, Any]:
+async def get_decision_point_assignments(user_id: str, assignment_data: Union[ExperimentAssignmentRequest, Dict[str, Any]]) -> Dict[str, Any]:
     """
     POST /v6/assign - Get experiment condition assignments for users.
     
@@ -49,10 +60,10 @@ async def get_decision_point_assignments(user_id: str, assignment_data: Dict[str
         APIError: For network errors or server issues
     """
     client = get_client()
-    return await client.post(ASSIGN_ENDPOINT, data=assignment_data, user_id=user_id)
+    return await client.post(ASSIGN_ENDPOINT, data=_to_dict(assignment_data), user_id=user_id)
 
 
-async def mark_decision_point(user_id: str, mark_data: Dict[str, Any]) -> Dict[str, Any]:
+async def mark_decision_point(user_id: str, mark_data: Union[MarkExperimentRequest, Dict[str, Any]]) -> Dict[str, Any]:
     """
     POST /v6/mark - Record decision point visits.
     
@@ -70,4 +81,4 @@ async def mark_decision_point(user_id: str, mark_data: Dict[str, Any]) -> Dict[s
         APIError: For network errors or server issues
     """
     client = get_client()
-    return await client.post(MARK_ENDPOINT, data=mark_data, user_id=user_id)
+    return await client.post(MARK_ENDPOINT, data=_to_dict(mark_data), user_id=user_id)

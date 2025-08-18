@@ -8,6 +8,7 @@ UpGrade client implementation.
 
 from typing import Dict, List, Optional, Any, Union, TypedDict, Literal
 from datetime import datetime
+from typing import NotRequired
 
 from .enums import (
     PostExperimentRule,
@@ -76,8 +77,8 @@ class Level(TypedDict):
     """Level definition for factorial experiments."""
     id: str
     name: str
-    description: Optional[str]
-    order: Optional[int]
+    description: NotRequired[Optional[str]]
+    order: NotRequired[Optional[int]]
     payload: Optional[Payload]
 
 
@@ -99,13 +100,10 @@ class ConditionPayload(TypedDict):
 
 class ConditionPayloadWithParent(TypedDict):
     """Condition payload with parent references (from full experiment responses)."""
-    createdAt: str
-    updatedAt: str
-    versionNumber: int
     id: str
-    parentCondition: str
-    decisionPoint: str
     payload: Payload
+    parentCondition: str
+    decisionPoint: NotRequired[Optional[str]]
 
 
 class Condition(TypedDict):
@@ -140,25 +138,16 @@ class Partition(TypedDict):
 
 class Metric(TypedDict):
     """Metric definition for queries."""
-    createdAt: str
-    updatedAt: str
-    versionNumber: int
     key: str
-    type: MetricType
-    allowedData: Optional[Any]
-    context: List[str]
 
 
 class Query(TypedDict):
     """Experiment query for metrics."""
-    createdAt: str
-    updatedAt: str
-    versionNumber: int
-    id: str
+    id: Optional[str]
     name: str
-    query: Dict[str, Any]  # Contains operationType like {"operationType": "avg"}
-    repeatedMeasure: RepeatedMeasure
+    query: Dict[str, Any]
     metric: Metric
+    repeatedMeasure: RepeatedMeasure
 
 
 class IndividualForSegment(TypedDict):
@@ -260,16 +249,16 @@ class CreateLevel(TypedDict):
     """Level data for creating factorial experiments."""
     id: str
     name: str
-    description: Optional[str]
-    order: Optional[int]
+    description: NotRequired[Optional[str]]
+    order: NotRequired[Optional[int]]
     payload: Optional[Payload]
 
 
 class CreateFactor(TypedDict):
     """Factor data for creating factorial experiments."""
-    id: Optional[str]
+    id: NotRequired[Optional[str]]
     name: str
-    description: Optional[str]
+    description: NotRequired[Optional[str]]
     order: int
     levels: List[CreateLevel]
 
@@ -283,13 +272,13 @@ class CreateLevelCombinationElement(TypedDict):
 class CreateCondition(TypedDict):
     """Condition data for creating experiments."""
     id: str
-    twoCharacterId: Optional[str]
+    twoCharacterId: NotRequired[Optional[str]]
     conditionCode: str
     assignmentWeight: int
-    description: Optional[str]
+    description: NotRequired[Optional[str]]
     order: int
-    name: Optional[str]
-    levelCombinationElements: Optional[List[CreateLevelCombinationElement]]
+    name: NotRequired[Optional[str]]
+    levelCombinationElements: NotRequired[Optional[List[CreateLevelCombinationElement]]]
 
 
 class CreateConditionPayload(TypedDict):
@@ -297,16 +286,16 @@ class CreateConditionPayload(TypedDict):
     id: str
     payload: Payload
     parentCondition: str
-    decisionPoint: Optional[str]
+    decisionPoint: NotRequired[Optional[str]]
 
 
 class CreatePartition(TypedDict):
     """Partition data for creating experiments."""
     id: str
-    twoCharacterId: Optional[str]
+    twoCharacterId: NotRequired[Optional[str]]
     site: str
-    target: Optional[str]
-    description: Optional[str]
+    target: NotRequired[Optional[str]]
+    description: NotRequired[Optional[str]]
     order: int
     excludeIfReached: bool
 
@@ -355,29 +344,29 @@ class CreateExperimentRequest(TypedDict):
     description: str
     consistencyRule: ConsistencyRule
     assignmentUnit: AssignmentUnit
-    group: Optional[str]
-    conditionOrder: Optional[ConditionOrder]
+    group: NotRequired[Optional[str]]
+    conditionOrder: NotRequired[ConditionOrder]
     type: ExperimentType
     context: List[str]
     assignmentAlgorithm: AssignmentAlgorithm
-    stratificationFactor: Optional[StratificationFactor]
+    stratificationFactor: NotRequired[Optional[StratificationFactor]]
     tags: List[str]
     conditions: List[CreateCondition]
-    conditionPayloads: Optional[List[CreateConditionPayload]]
+    conditionPayloads: NotRequired[Optional[List[CreateConditionPayload]]]
     partitions: List[CreatePartition]
     experimentSegmentInclusion: CreateExperimentSegment
     experimentSegmentExclusion: CreateExperimentSegment
     filterMode: FilterMode
-    factors: Optional[List[CreateFactor]]
-    queries: List[CreateQuery]
-    endOn: Optional[str]
-    enrollmentCompleteCondition: Optional[EnrollmentCompleteCondition]
-    startOn: Optional[str]
+    factors: NotRequired[Optional[List[CreateFactor]]]
+    queries: NotRequired[Optional[List[CreateQuery]]]
+    endOn: NotRequired[Optional[str]]
+    enrollmentCompleteCondition: NotRequired[Optional[EnrollmentCompleteCondition]]
+    startOn: NotRequired[Optional[str]]
     state: ExperimentState
     postExperimentRule: PostExperimentRule
-    revertTo: Optional[str]
-    moocletPolicyParameters: Optional[Any]
-    rewardMetricKey: Optional[str]
+    revertTo: NotRequired[Optional[str]]
+    moocletPolicyParameters: NotRequired[Any]
+    rewardMetricKey: NotRequired[str]
 
 
 class UpdateExperimentStateRequest(TypedDict):
@@ -400,15 +389,15 @@ ExperimentNamesResponse = List[ExperimentName]
 # User initialization types (POST /v6/init)
 class InitExperimentUserRequest(TypedDict):
     """Request payload for POST /v6/init."""
-    group: Optional[Dict[str, List[str]]]
-    workingGroup: Optional[Dict[str, str]]
+    group: NotRequired[Optional[Dict[str, List[str]]]]
+    workingGroup: NotRequired[Optional[Dict[str, str]]]
 
 
 class InitExperimentUserResponse(TypedDict):
     """Response from POST /v6/init."""
     id: str
-    group: Optional[Dict[str, List[str]]]
-    workingGroup: Optional[Dict[str, str]]
+    group: NotRequired[Optional[Dict[str, List[str]]]]
+    workingGroup: NotRequired[Optional[Dict[str, str]]]
 
 
 # Assignment types (POST /v6/assign)
@@ -452,9 +441,9 @@ class MarkData(TypedDict):
 class MarkExperimentRequest(TypedDict):
     """Request payload for POST /v6/mark."""
     data: MarkData
-    status: Optional[MarkedDecisionPointStatus]
-    uniquifier: Optional[str]
-    clientError: Optional[str]
+    status: NotRequired[Optional[MarkedDecisionPointStatus]]
+    uniquifier: NotRequired[Optional[str]]
+    clientError: NotRequired[Optional[str]]
 
 
 class MonitoredDecisionPoint(TypedDict):
