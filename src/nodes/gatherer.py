@@ -8,6 +8,7 @@ It gathers all information needed for user requests and validates parameters.
 from typing import Dict, Any
 from langchain_anthropic import ChatAnthropic
 from langchain.prompts import ChatPromptTemplate
+from pydantic import SecretStr
 
 from src.graph.state import AgentState
 from src.tools import get_tools_for_node
@@ -16,9 +17,11 @@ from src.config.config import config
 
 # Create the LLM instance  
 llm = ChatAnthropic(
-    model=config.MODEL_NAME,
-    api_key=config.ANTHROPIC_API_KEY,
-    temperature=0.1
+    api_key=SecretStr(config.ANTHROPIC_API_KEY),
+    model_name=config.MODEL_NAME,
+    temperature=0.1,
+    timeout=30,
+    stop=None
 )
 
 # Get tools for this node

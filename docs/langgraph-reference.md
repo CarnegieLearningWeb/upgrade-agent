@@ -584,32 +584,3 @@ def report_node(state: ResearchState):
     return {"final_report": report}
 ```
 
-### 3. API Testing and Validation
-
-```python
-def make_api_call(state: TestState):
-    """Make API call and capture response"""
-    try:
-        response = requests.get(state["api_endpoint"])
-        return {
-            "response": response.json(),
-            "status_code": response.status_code,
-            "success": response.status_code == 200
-        }
-    except Exception as e:
-        return {
-            "response": None,
-            "status_code": None,
-            "success": False,
-            "error": str(e)
-        }
-
-def validate_response(state: TestState):
-    """Validate API response"""
-    if not state["success"]:
-        return {"validation_result": "API call failed"}
-
-    # Validation logic
-    is_valid = validate_schema(state["response"])
-    return {"validation_result": "Valid" if is_valid else "Invalid"}
-```
