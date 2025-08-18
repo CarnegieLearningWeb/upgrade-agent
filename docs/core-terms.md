@@ -48,7 +48,7 @@ Available options
 - Stratified Random Sampling (not supported): Random assignment within balanced subgroups to ensure representation.
 - TS Configurable (not supported): Uses the TS Configurable algorithm to adaptively assign a condition based on the reward metrics collected (part of the MOOClet)
 
-### Decision Point
+### Decision Point (or Partition)
 
 A decision point is a location in your application where an experiment condition needs to be determined. It consists of:
 
