@@ -149,9 +149,20 @@ def _transform_to_create_experiment_request(action_params: Dict[str, Any]) -> Cr
     # Transform decision_points to partitions format
     partitions = _create_partitions(action_params['decision_points'])
 
+    # Handle filter_mode-specific logic for inclusion segment
+    filter_mode = action_params.get('filter_mode', 'excludeAll')
+    if filter_mode == 'includeAll':
+        # When filter_mode is includeAll, override inclusion users/groups
+        inclusion_users = []
+        inclusion_groups = [{"type": "All", "group_id": "All"}]
+    else:
+        # For other filter modes (like excludeAll), use provided values
+        inclusion_users = action_params.get('inclusion_users', [])
+        inclusion_groups = action_params.get('inclusion_groups', [])
+
     experiment_segment_inclusion = _create_experiment_segment(
-        inclusion_users=action_params.get('inclusion_users', []),
-        inclusion_groups=action_params.get('inclusion_groups', []),
+        inclusion_users=inclusion_users,
+        inclusion_groups=inclusion_groups,
         is_inclusion=True
     )
 
@@ -360,19 +371,58 @@ def _apply_segments_update(
     updated_request: CreateExperimentRequest, 
     action_params: Dict[str, Any]
 ) -> None:
-    """Apply segment updates (inclusion/exclusion)."""
-    if any(key in action_params for key in ['inclusion_users', 'inclusion_groups']):
+    """Apply segment updates (inclusion/exclusion) with filter_mode-specific logic."""
+    
+    # Handle inclusion segment with filter_mode logic
+    should_update_inclusion = any(key in action_params for key in ['inclusion_users', 'inclusion_groups', 'filter_mode'])
+    
+    if should_update_inclusion:
+        filter_mode = action_params.get('filter_mode')
+        
+        if filter_mode == 'includeAll':
+            # When filter_mode is includeAll, override with 'All' group
+            inclusion_users = []
+            inclusion_groups = [{"type": "All", "group_id": "All"}]
+        else:
+            # For all other cases (excludeAll or no filter_mode change)
+            # Only use action_params values if they are explicitly provided
+            # Otherwise preserve existing values from updated_request
+            
+            existing_inclusion = updated_request.get('experimentSegmentInclusion', {}).get('segment', {})
+            existing_users = [ind['userId'] for ind in existing_inclusion.get('individualForSegment', [])]
+            existing_groups = [
+                {"type": grp['type'], "group_id": grp['groupId']} 
+                for grp in existing_inclusion.get('groupForSegment', [])
+            ]
+            
+            # Use provided values only if explicitly present, otherwise preserve existing
+            inclusion_users = action_params['inclusion_users'] if 'inclusion_users' in action_params else existing_users
+            inclusion_groups = action_params['inclusion_groups'] if 'inclusion_groups' in action_params else existing_groups
+        
         inclusion_segment = _create_experiment_segment(
-            inclusion_users=action_params.get('inclusion_users', []),
-            inclusion_groups=action_params.get('inclusion_groups', []),
+            inclusion_users=inclusion_users,
+            inclusion_groups=inclusion_groups,
             is_inclusion=True
         )
         updated_request['experimentSegmentInclusion'] = inclusion_segment
         
+    # Handle exclusion segment (no filter_mode logic needed)
     if any(key in action_params for key in ['exclusion_users', 'exclusion_groups']):
+        # Get existing exclusion data to preserve if not provided
+        existing_exclusion = updated_request.get('experimentSegmentExclusion', {}).get('segment', {})
+        existing_excl_users = [ind['userId'] for ind in existing_exclusion.get('individualForSegment', [])]
+        existing_excl_groups = [
+            {"type": grp['type'], "group_id": grp['groupId']} 
+            for grp in existing_exclusion.get('groupForSegment', [])
+        ]
+        
+        # Use provided values only if explicitly present, otherwise preserve existing
+        exclusion_users = action_params['exclusion_users'] if 'exclusion_users' in action_params else existing_excl_users
+        exclusion_groups = action_params['exclusion_groups'] if 'exclusion_groups' in action_params else existing_excl_groups
+        
         exclusion_segment = _create_experiment_segment(
-            exclusion_users=action_params.get('exclusion_users', []),
-            exclusion_groups=action_params.get('exclusion_groups', []),
+            exclusion_users=exclusion_users,
+            exclusion_groups=exclusion_groups,
             is_inclusion=False
         )
         updated_request['experimentSegmentExclusion'] = exclusion_segment
