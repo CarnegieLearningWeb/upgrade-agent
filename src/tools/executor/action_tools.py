@@ -649,7 +649,7 @@ async def delete_experiment(action_params: Dict[str, Any]) -> Dict[str, Any]:
     - experiment_id: string
     
     Returns:
-        Deletion confirmation
+        Deleted experiment details
     """
     try:
         _validate_required_params(action_params, ['experiment_id'])
