@@ -262,7 +262,7 @@ class ToolTester:
         
         # Prepare test data for experiment creation
         if not conditions or len(conditions) < 2:
-            conditions = ["control", "treatment"]  # Default conditions
+            conditions = ["control", "variant"]  # Default conditions
         
         if not decision_points or len(decision_points) == 0:
             decision_points = [{"site": "default_site", "target": "default_target"}]
@@ -327,7 +327,7 @@ class ToolTester:
         else:
             print("\n⚠️  Skipping update_experiment_status - no created experiment available")
         
-        # 4. Commented out delete_experiment test as requested
+        # 4. Test delete_experiment (if we created an experiment)
         # if self.created_experiment_id:
         #     try:
         #         action_params = {"experiment_id": self.created_experiment_id}
