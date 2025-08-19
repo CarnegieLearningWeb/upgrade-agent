@@ -31,9 +31,6 @@ def set_action_needed(
     Args:
         action: The action that needs to be performed
         reasoning: Explanation of why this action is needed
-        
-    Returns:
-        Confirmation message
     """
     from src.tools.decorators import _state_ref
     
@@ -51,9 +48,6 @@ def set_action_params(action_params: Dict[str, Any]) -> str:
     
     Args:
         action_params: Dictionary of parameters for the action
-        
-    Returns:
-        Confirmation message
     """
     from src.tools.decorators import _state_ref
     
@@ -72,9 +66,6 @@ def set_missing_params(missing_params: List[str]) -> str:
     
     Args:
         missing_params: List of parameter names that are still needed
-        
-    Returns:
-        Confirmation message
     """
     from src.tools.decorators import _state_ref
     
@@ -96,9 +87,6 @@ def update_action_params(key: str, value: Any) -> str:
     Args:
         key: Parameter name to update
         value: New value for the parameter
-        
-    Returns:
-        Confirmation message
     """
     from src.tools.decorators import _state_ref
     
@@ -122,9 +110,6 @@ def add_error(
     Args:
         error_type: Type of error (api, auth, validation, not_found, unknown)
         message: Error message description
-        
-    Returns:
-        Confirmation message
     """
     from src.tools.decorators import _state_ref
     

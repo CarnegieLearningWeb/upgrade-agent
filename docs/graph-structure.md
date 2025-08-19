@@ -17,7 +17,7 @@ UpGradeAgent is a LangGraph-based chatbot for UpGrade A/B testing platform. It e
 ### How to create the LLM instance  
 llm = ChatAnthropic(
     api_key=SecretStr(config.ANTHROPIC_API_KEY),
-    model_name=config.MODEL_NAME
+    model_name=config.MODEL_NAME,
     temperature=0.1,
     timeout=30,
     stop=None

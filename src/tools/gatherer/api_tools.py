@@ -33,12 +33,7 @@ from src.utils.experiment_transforms import _transform_experiment_data
 @auto_store("upgrade_health")
 @handle_errors()
 async def check_upgrade_health() -> ToolHealthResponse:
-    """
-    Check UpGrade service health and version information.
-    
-    Returns:
-        Dict with keys: name, version, description
-    """
+    """Check UpGrade service health and version information."""
     response = await api_check_upgrade_health()
     return {
         "name": response.get("name", "UpGrade"),
@@ -52,12 +47,7 @@ async def check_upgrade_health() -> ToolHealthResponse:
 @auto_store_static("context_metadata")
 @handle_errors("api")
 async def get_context_metadata() -> Dict[str, ToolContextMetadata]:
-    """
-    Get available app contexts and their supported values.
-    
-    Returns:
-        Dict mapping context names to their metadata with lowercase keys
-    """
+    """Get available app contexts and their supported values."""
     response = await api_get_context_metadata()
     context_data = {}
     
@@ -79,12 +69,7 @@ async def get_context_metadata() -> Dict[str, ToolContextMetadata]:
 @auto_store_static("experiment_names")
 @handle_errors("api")
 async def get_experiment_names() -> List[ToolExperimentName]:
-    """
-    Get all experiment names and IDs.
-    
-    Returns:
-        List of dicts with keys: id, name
-    """
+    """Get all experiment names and IDs."""
     response = await api_get_experiment_names()
     
     # Handle the case where response might be a wrapper dict or direct list
@@ -102,12 +87,7 @@ async def get_experiment_names() -> List[ToolExperimentName]:
 @auto_store_static("all_experiments")
 @handle_errors("api")
 async def get_all_experiments() -> List[SimplifiedExperiment]:
-    """
-    Get all experiments with simplified format for tool responses.
-    
-    Returns:
-        List of simplified experiment dicts
-    """
+    """Get all experiments with simplified format for tool responses."""
     response = await api_get_all_experiments()
     
     # Handle the case where response might be a wrapper dict or direct list
@@ -130,9 +110,6 @@ async def get_experiment_details(experiment_id: str) -> SimplifiedExperiment:
     
     Args:
         experiment_id: UUID of the experiment
-        
-    Returns:
-        Simplified experiment dict
     """
     if not experiment_id or not experiment_id.strip():
         raise ValueError("experiment_id is required and cannot be empty")
