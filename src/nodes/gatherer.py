@@ -185,51 +185,127 @@ PARAMETER COLLECTION:
 Remember: Your goal is to ensure the Tool Executor receives complete, validated parameters for successful API execution."""
 
 
-async def _process_tool_calls(response: AIMessage, state: AgentState) -> Dict[str, Any]:
-    """Process tool calls from the LLM response."""
+async def _execute_tool_calls_and_create_tool_messages(response: AIMessage, state: AgentState) -> list:
+    """Execute tool calls and create ToolMessage objects for LangChain."""
+    from langchain_core.messages import ToolMessage
+    import inspect
+    
+    tool_messages = []
+    gatherer_tools = tool_registry.get_tools_for_node("gatherer")
+    
+    for tool_call in response.tool_calls:
+        try:
+            tool_name = tool_call['name']
+            tool_args = tool_call['args']
+            tool_id = tool_call['id']
+            
+            logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
+            
+            if tool_name not in gatherer_tools:
+                logger.error(f"Unknown tool requested: {tool_name}")
+                tool_result = f"Unknown tool: {tool_name}"
+            else:
+                tool_func = gatherer_tools[tool_name]
+                # Check if tool is async and handle accordingly
+                if inspect.iscoroutinefunction(tool_func):
+                    tool_result = await tool_func(**tool_args)
+                else:
+                    tool_result = tool_func(**tool_args)
+                logger.info(f"Tool {tool_name} executed successfully")
+            
+            # Create ToolMessage with the result
+            tool_message = ToolMessage(
+                content=str(tool_result),
+                name=tool_name,
+                tool_call_id=tool_id
+            )
+            tool_messages.append(tool_message)
+            
+        except Exception as e:
+            logger.error(f"Error executing tool {tool_call['name']}: {e}")
+            # Create ToolMessage with error
+            error_message = ToolMessage(
+                content=f"Tool {tool_call['name']} failed: {str(e)}",
+                name=tool_call['name'],
+                tool_call_id=tool_call['id']
+            )
+            tool_messages.append(error_message)
+    
+    return tool_messages
+
+
+async def _handle_single_iteration(llm_with_tools, conversation: list, state: AgentState) -> tuple[AIMessage, list]:
+    """Handle a single iteration of tool calling."""
+    # Get LLM response (potentially with tool calls)
+    response = cast(AIMessage, llm_with_tools.invoke(conversation))
+    
+    # Check if there are tool calls to execute
+    if not (hasattr(response, 'tool_calls') and response.tool_calls):
+        return response, []
+    
+    # Execute tool calls and create tool messages
+    tool_messages = await _execute_tool_calls_and_create_tool_messages(response, state)
+    return response, tool_messages
+
+
+async def _execute_iterative_tool_calls(llm_with_tools, messages: list, state: AgentState, max_iterations: int = 3) -> bool:
+    """Execute iterative tool calls until the LLM stops making tool calls or max iterations reached.
+    
+    Returns:
+        bool: True if completed successfully, False if there was an error
+    """
+    conversation = messages[:]
+    iteration = 0
+    
+    while iteration < max_iterations:
+        iteration += 1
+        logger.info(f"Tool calling iteration {iteration}/{max_iterations}")
+        
+        response, tool_messages = await _handle_single_iteration(llm_with_tools, conversation, state)
+        conversation.append(response)
+        
+        # If no tool calls, we're done
+        if not tool_messages:
+            logger.info(f"Iteration {iteration}: No more tool calls, gathering complete")
+            return True
+        
+        # Continue with next iteration
+        conversation.extend(tool_messages)
+        logger.info(f"Iteration {iteration}: Executed {len(tool_messages)} tools, continuing...")
+    
+    # Max iterations reached
+    logger.info(f"Max iterations ({max_iterations}) reached, gathering complete")
+    return True
+
+
+async def _process_tool_calls(response: AIMessage, llm_with_tools, messages: list, state: AgentState) -> Dict[str, Any]:
+    """Process tool calls from the LLM response using iterative tool calling pattern."""
     if not (hasattr(response, 'tool_calls') and response.tool_calls):
         logger.warning("Gatherer did not make any tool calls")
         # If no tool calls, assume we're providing information based on existing data
         return {"current_state": "RESPONDING"}
     
-    logger.info(f"Gatherer made {len(response.tool_calls)} tool calls")
+    logger.info(f"Gatherer made {len(response.tool_calls)} initial tool calls - starting iterative execution")
     
-    # Execute each tool call
-    results = []
-    for tool_call in response.tool_calls:
-        tool_name = tool_call['name']
-        tool_args = tool_call['args']
+    try:
+        # Use iterative tool calling to handle multiple rounds
+        success = await _execute_iterative_tool_calls(llm_with_tools, messages, state)
         
-        logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
-        
-        # Get the tool function
-        gatherer_tools = tool_registry.get_tools_for_node("gatherer")
-        if tool_name in gatherer_tools:
-            tool_func = gatherer_tools[tool_name]
-            try:
-                # Check if tool is async and handle accordingly
-                import inspect
-                if inspect.iscoroutinefunction(tool_func):
-                    tool_result = await tool_func(**tool_args)
-                else:
-                    tool_result = tool_func(**tool_args)
-                results.append(f"{tool_name}: {tool_result}")
-                logger.info(f"Tool {tool_name} result: {tool_result}")
-            except Exception as e:
-                logger.error(f"Error executing tool {tool_name}: {e}")
-                return {
-                    "current_state": "RESPONDING",
-                    "errors": {**state.get("errors", {}), "gatherer": f"Tool execution failed: {str(e)}"}
-                }
-        else:
-            logger.error(f"Unknown tool requested: {tool_name}")
+        if not success:
             return {
                 "current_state": "RESPONDING",
-                "errors": {**state.get("errors", {}), "gatherer": f"Unknown tool: {tool_name}"}
+                "errors": {**state.get("errors", {}), "gatherer": "Tool execution failed during iterative processing"}
             }
-    
-    logger.info(f"All tool executions completed: {results}")
-    return {}
+        
+        logger.info("All iterative tool executions completed successfully")
+        return {}
+        
+    except Exception as e:
+        logger.error(f"Error in iterative tool calling: {e}")
+        return {
+            "current_state": "RESPONDING",
+            "errors": {**state.get("errors", {}), "gatherer": f"Iterative tool execution failed: {str(e)}"}
+        }
 
 
 async def gatherer_node(state: AgentState) -> Dict[str, Any]:
@@ -273,8 +349,8 @@ async def gatherer_node(state: AgentState) -> Dict[str, Any]:
         # Get LLM response with tool calls
         response = cast(AIMessage, llm_with_tools.invoke(messages))
         
-        # Process tool calls
-        tool_result = await _process_tool_calls(response, state)
+        # Process tool calls using iterative pattern
+        tool_result = await _process_tool_calls(response, llm_with_tools, messages, state)
         if tool_result:  # If there was an error or completion signal
             return tool_result
         

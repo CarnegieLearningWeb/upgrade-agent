@@ -208,28 +208,6 @@ TOKEN EFFICIENCY:
 Remember: You are the voice of UpGradeAgent. Be helpful, accurate, and conversational while maintaining professionalism."""
 
 
-def _execute_single_tool_call(tool_call: Any) -> str:
-    """Execute a single tool call and return the result string."""
-    tool_name = tool_call['name']
-    tool_args = tool_call['args']
-    
-    logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
-    
-    response_tools = tool_registry.get_tools_for_node("response")
-    if tool_name not in response_tools:
-        logger.error(f"Unknown tool requested: {tool_name}")
-        return f"Unknown tool: {tool_name}"
-    
-    tool_func = response_tools[tool_name]
-    try:
-        tool_result = tool_func(**tool_args)
-        logger.info(f"Tool {tool_name} result: {tool_result}")
-        return f"Tool {tool_name}: {tool_result}"
-    except Exception as e:
-        logger.error(f"Error executing tool {tool_name}: {e}")
-        return f"Tool {tool_name} failed: {str(e)}"
-
-
 def _extract_text_from_content(content: Any) -> str:
     """Extract text content from LLM response content."""
     if isinstance(content, str):
