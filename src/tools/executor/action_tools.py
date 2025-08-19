@@ -66,12 +66,6 @@ async def create_experiment(action_params: Dict[str, Any]) -> SimplifiedExperime
     - inclusion_groups: list of {type: str, group_id: str} to include in experiment
     - exclusion_users: list of user IDs to exclude from experiment  
     - exclusion_groups: list of {type: str, group_id: str} to exclude from experiment
-    
-    Returns:
-        Created experiment in simplified format
-        
-    Raises:
-        ValueError: If required parameters are missing or invalid
     """
     try:
         _validate_required_params(action_params, ['name', 'context', 'decision_points', 'conditions'])
@@ -121,12 +115,6 @@ async def update_experiment(action_params: Dict[str, Any]) -> SimplifiedExperime
     - filter_mode: 'excludeAll' or 'includeAll'
     - context: string (will be converted to list format)
     - And other experiment configuration fields
-    
-    Returns:
-        Updated experiment in simplified format
-        
-    Raises:
-        ValueError: If required parameters are missing or invalid
     """
     try:
         _validate_required_params(action_params, ['experiment_id'])
@@ -166,9 +154,6 @@ async def update_experiment_status(action_params: Dict[str, Any]) -> SimplifiedE
     Required parameters in action_params:
     - experiment_id: string
     - status: string ('inactive', 'preview', 'enrolling', 'enrollmentComplete', 'cancelled')
-    
-    Returns:
-        Updated experiment in simplified format
     """
     try:
         _validate_required_params(action_params, ['experiment_id', 'status'])
@@ -194,9 +179,6 @@ async def delete_experiment(action_params: Dict[str, Any]) -> SimplifiedExperime
     
     Required parameters in action_params:
     - experiment_id: string
-    
-    Returns:
-        Deleted experiment in simplified format
     """
     try:
         _validate_required_params(action_params, ['experiment_id'])
@@ -225,9 +207,6 @@ async def init_experiment_user(action_params: Dict[str, Any]) -> ToolInitExperim
     Optional parameters:
     - group: dict of {group_type: [group_ids]}
     - working_group: dict of {group_type: group_id}
-    
-    Returns:
-        User initialization results
     """
     try:
         _validate_required_params(action_params, ['user_id'])
@@ -266,9 +245,6 @@ async def get_decision_point_assignments(action_params: Dict[str, Any]) -> List[
     Required parameters in action_params:
     - user_id: string
     - context: string
-    
-    Returns:
-        List of decision point assignments
     """
     try:
         _validate_required_params(action_params, ['user_id', 'context'])
@@ -319,9 +295,6 @@ async def mark_decision_point(action_params: Dict[str, Any]) -> ToolMarkExperime
     - user_id: string
     - decision_point: dict with site and target
     - assigned_condition: dict with condition_code and experiment_id
-    
-    Returns:
-        Mark decision point results
     """
     try:
         _validate_required_params(action_params, ['user_id', 'decision_point', 'assigned_condition'])
