@@ -107,15 +107,15 @@ AVAILABLE TOOLS:
 - get_group_types_for_context(context) → Available group types for a context
 
 **Experiment Management Tools:**
-- create_experiment(action_params) → Create new experiment
-- update_experiment(action_params) → Update existing experiment
-- update_experiment_status(action_params) → Change experiment status
-- delete_experiment(action_params) → Delete experiment
+- create_experiment(action_params) → Create new experiment with params: {{name, context, decision_points, conditions, ...}}
+- update_experiment(action_params) → Update existing experiment with params: {{experiment_id, ...}}
+- update_experiment_status(action_params) → Change experiment status with params: {{experiment_id, status}}
+- delete_experiment(action_params) → Delete experiment with params: {{experiment_id}}
 
 **User Simulation Tools:**
-- init_experiment_user(action_params) → Initialize user with group memberships
-- get_decision_point_assignments(action_params) → Get condition assignments for user
-- mark_decision_point(action_params) → Mark decision point as visited
+- init_experiment_user(action_params) → Initialize user with params: {{user_id, group, working_group}}
+- get_decision_point_assignments(action_params) → Get condition assignments with params: {{user_id, context}}
+- mark_decision_point(action_params) → Mark decision point with params: {{user_id, decision_point, assigned_condition}}
 
 **State Management Tools (for complex workflows):**
 - set_action_needed(action, reasoning) → Set action for execution
@@ -158,9 +158,15 @@ User: "What contexts are available?"
 
 User: "Create an experiment called 'Math Hints' in assign-prog context"  
 → Call get_available_contexts() to validate context
-→ Call get_conditions_for_context() and get_decision_points_for_context() to show options
+→ Call get_conditions_for_context() and get_decision_points_for_context() to get available options
 → If missing required params, ask for them
-→ Once all params collected, call create_experiment() directly
+→ Once all params collected, call create_experiment with direct parameters:
+   create_experiment({{
+     "name": "Math Hints",
+     "context": "assign-prog", 
+     "decision_points": [{{"site": "lesson", "target": "hint", "exclude_if_reached": false}}],
+     "conditions": [{{"code": "control", "weight": 50}}, {{"code": "treatment", "weight": 50}}]
+   }})
 → Show success result
 
 User: "What conditions did user123 get for the Math Hints experiment?"
@@ -217,11 +223,17 @@ async def _execute_tool_calls_and_create_tool_messages(response: AIMessage, stat
                 tool_result = f"Unknown tool: {tool_name}"
             else:
                 tool_func = all_tools[tool_name]
-                # Check if tool is async and handle accordingly
-                if inspect.iscoroutinefunction(tool_func):
-                    tool_result = await tool_func(**tool_args)
+                # Use LangChain's proper tool invocation method
+                if hasattr(tool_func, 'ainvoke'):
+                    tool_result = await tool_func.ainvoke(tool_args)
+                elif hasattr(tool_func, 'invoke'):
+                    tool_result = tool_func.invoke(tool_args)
                 else:
-                    tool_result = tool_func(**tool_args)
+                    # Fallback to direct function call for non-LangChain tools
+                    if inspect.iscoroutinefunction(tool_func):
+                        tool_result = await tool_func(**tool_args)
+                    else:
+                        tool_result = tool_func(**tool_args)
                 logger.info(f"Tool {tool_name} executed successfully")
             
             # Create ToolMessage with the result
