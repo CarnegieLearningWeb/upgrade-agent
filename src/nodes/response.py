@@ -246,35 +246,109 @@ def _extract_text_from_content(content: Any) -> str:
     return ""
 
 
-def _process_tool_calls(response: AIMessage) -> Dict[str, Any]:
-    """Process tool calls from the LLM response."""
+def _execute_tool_calls_and_create_tool_messages(response: AIMessage) -> list:
+    """Execute tool calls and create ToolMessage objects for LangChain."""
+    from langchain_core.messages import ToolMessage
+    
+    tool_messages = []
+    for tool_call in response.tool_calls:
+        try:
+            # Execute the tool
+            tool_name = tool_call['name']
+            tool_args = tool_call['args']
+            tool_id = tool_call['id']
+            
+            logger.info(f"Executing tool: {tool_name} with args: {tool_args}")
+            
+            response_tools = tool_registry.get_tools_for_node("response")
+            if tool_name not in response_tools:
+                logger.error(f"Unknown tool requested: {tool_name}")
+                tool_result = f"Unknown tool: {tool_name}"
+            else:
+                tool_func = response_tools[tool_name]
+                tool_result = tool_func(**tool_args)
+                logger.info(f"Tool {tool_name} executed successfully")
+            
+            # Create ToolMessage with the result
+            tool_message = ToolMessage(
+                content=str(tool_result),
+                name=tool_name,
+                tool_call_id=tool_id
+            )
+            tool_messages.append(tool_message)
+            
+        except Exception as e:
+            logger.error(f"Error executing tool {tool_call['name']}: {e}")
+            # Create ToolMessage with error
+            error_message = ToolMessage(
+                content=f"Tool {tool_call['name']} failed: {str(e)}",
+                name=tool_call['name'],
+                tool_call_id=tool_call['id']
+            )
+            tool_messages.append(error_message)
+    
+    return tool_messages
+
+
+def _generate_final_response_from_tool_results(llm_with_tools, messages: list, response: AIMessage, tool_messages: list) -> str:
+    """Generate final response using tool results with proper LangChain conversation pattern."""
+    # Create conversation with tool results using proper LangChain pattern
+    conversation_with_tool_results = messages + [response] + tool_messages
+    
+    # Get final response with tool results
+    final_response = cast(AIMessage, llm_with_tools.invoke(conversation_with_tool_results))
+    
+    # Extract text content from final response
+    if hasattr(final_response, 'content') and final_response.content:
+        final_text = _extract_text_from_content(final_response.content)
+        if final_text:
+            return final_text
+    
+    return "I've gathered the requested information and it's now available for your review."
+
+
+def _create_fallback_response(response: AIMessage, tool_messages: list) -> str:
+    """Create fallback response when tool execution fails."""
+    text_content = ""
+    if hasattr(response, 'content') and response.content:
+        text_content = _extract_text_from_content(response.content)
+    
+    # Create fallback response with tool results
+    tool_results_summary = "\n".join([f"{msg.name}: {msg.content}" for msg in tool_messages])
+    
+    if text_content:
+        return f"{text_content}\n\nBased on the information I gathered:\n{tool_results_summary}"
+    else:
+        return f"I've gathered the following information for you:\n\n{tool_results_summary}"
+
+
+def _process_tool_calls(response: AIMessage, llm_with_tools, messages: list) -> Dict[str, Any]:
+    """Process tool calls from the LLM response using proper LangChain pattern."""
     updates = {}
     
     if not (hasattr(response, 'tool_calls') and response.tool_calls):
         # No tool calls - use the response content directly
         if hasattr(response, 'content') and response.content:
-            updates["final_response"] = response.content
+            final_text = _extract_text_from_content(response.content)
+            updates["final_response"] = final_text
         else:
             updates["final_response"] = "I apologize, but I'm having trouble generating a response. Please try rephrasing your request."
         return updates
     
     logger.info(f"Response generator made {len(response.tool_calls)} tool calls")
     
-    # Execute tool calls to gather additional information
-    for tool_call in response.tool_calls:
-        _execute_single_tool_call(tool_call)
+    # Execute tool calls and create ToolMessage objects
+    tool_messages = _execute_tool_calls_and_create_tool_messages(response)
     
-    # Extract text content from response (excluding tool calls)
-    text_content = ""
-    if hasattr(response, 'content') and response.content:
-        text_content = _extract_text_from_content(response.content)
-    
-    # Use extracted text content or create fallback response
-    if text_content:
-        updates["final_response"] = text_content
-    else:
-        # Fallback response - the LLM made tool calls but didn't provide explanatory text
-        updates["final_response"] = "I've processed your request and gathered the necessary information to provide a complete response."
+    try:
+        # Generate final response using proper LangChain pattern
+        final_text = _generate_final_response_from_tool_results(llm_with_tools, messages, response, tool_messages)
+        updates["final_response"] = final_text
+            
+    except Exception as e:
+        logger.error(f"Error generating final response after tool calls: {e}")
+        # Create fallback response
+        updates["final_response"] = _create_fallback_response(response, tool_messages)
     
     return updates
 
@@ -328,7 +402,7 @@ def response_generator_node(state: AgentState) -> Dict[str, Any]:
         response = cast(AIMessage, llm_with_tools.invoke(messages))
         
         # Process tool calls and generate final response
-        updates = _process_tool_calls(response)
+        updates = _process_tool_calls(response, llm_with_tools, messages)
         
         # Determine if conversation should be complete
         # Conversation is complete if:
