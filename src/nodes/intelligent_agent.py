@@ -169,11 +169,6 @@ User: "Create an experiment called 'Math Hints' in assign-prog context"
    }})
 → Show success result
 
-User: "What conditions did user123 get for the Math Hints experiment?"
-→ Call get_experiment_names() to find experiment ID
-→ Call get_decision_point_assignments() with user123 and context
-→ Present the condition assignments
-
 User: "Delete the Math Hints experiment"
 → Call get_experiment_names() to find experiment ID  
 → Call delete_experiment() directly
