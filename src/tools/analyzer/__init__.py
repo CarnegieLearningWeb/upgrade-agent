@@ -14,12 +14,11 @@ from ..registry import register_analyzer_tool
 @register_analyzer_tool("analyze_user_request")
 def analyze_user_request(
     intent_type: Literal["direct_answer", "needs_info"],
-    confidence: float,  # 0.0 to 1.0
-    user_request_summary: str,  # Summary for other nodes
-    reasoning: str  # Why this classification was chosen
+    confidence: float,
+    user_request_summary: str,
+    reasoning: str
 ) -> str:
-    """
-    Analyze user input and determine next action.
+    """Analyze user input and determine next action.
     
     This tool classifies user intent and provides context for other nodes.
     
@@ -28,9 +27,6 @@ def analyze_user_request(
         confidence: Confidence level in the classification (0.0 to 1.0)
         user_request_summary: Summary of what the user is asking for
         reasoning: Explanation of why this classification was chosen
-        
-    Returns:
-        String confirmation of the analysis
     """
     # Store the analysis results in global state
     from ..decorators import _state_ref

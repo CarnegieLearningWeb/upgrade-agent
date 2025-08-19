@@ -2,7 +2,7 @@
 
 UpGrade is an open source A/B testing platform for education software. UpGradeAgent is a chatbot that can make requests to UpGrade's client API endpoints for testing, simulating, and verifying its functionalities based on natural language inputs.
 
-This document describes the MVP design of this chatbot which uses a **streamlined 5-node architecture** to provide reliable, context-aware conversations about A/B testing operations. The app is built with Python using the LangGraph library and Anthropic Claude Sonnet 4 model (claude-sonnet-4-20250514).
+This document describes the MVP design of this chatbot which uses a **streamlined 5-node architecture** to provide reliable, context-aware conversations about A/B testing operations. The app is built with Python using the LangGraph library and Anthropic Claude Sonnet model.
 
 For the MVP, users interact with the chatbot in the Terminal console (it may later become a Slack bot).
 
