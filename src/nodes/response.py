@@ -290,23 +290,6 @@ def _execute_tool_calls_and_create_tool_messages(response: AIMessage) -> list:
     return tool_messages
 
 
-def _generate_final_response_from_tool_results(llm_with_tools, messages: list, response: AIMessage, tool_messages: list) -> str:
-    """Generate final response using tool results with proper LangChain conversation pattern."""
-    # Create conversation with tool results using proper LangChain pattern
-    conversation_with_tool_results = messages + [response] + tool_messages
-    
-    # Get final response with tool results
-    final_response = cast(AIMessage, llm_with_tools.invoke(conversation_with_tool_results))
-    
-    # Extract text content from final response
-    if hasattr(final_response, 'content') and final_response.content:
-        final_text = _extract_text_from_content(final_response.content)
-        if final_text:
-            return final_text
-    
-    return "I've gathered the requested information and it's now available for your review."
-
-
 def _create_fallback_response(response: AIMessage, tool_messages: list) -> str:
     """Create fallback response when tool execution fails."""
     text_content = ""
@@ -322,8 +305,69 @@ def _create_fallback_response(response: AIMessage, tool_messages: list) -> str:
         return f"I've gathered the following information for you:\n\n{tool_results_summary}"
 
 
+def _handle_single_iteration(llm_with_tools, conversation: list) -> tuple[AIMessage, list]:
+    """Handle a single iteration of tool calling."""
+    # Get LLM response (potentially with tool calls)
+    response = cast(AIMessage, llm_with_tools.invoke(conversation))
+    
+    # Check if there are tool calls to execute
+    if not (hasattr(response, 'tool_calls') and response.tool_calls):
+        return response, []
+    
+    # Execute tool calls and create tool messages
+    tool_messages = _execute_tool_calls_and_create_tool_messages(response)
+    return response, tool_messages
+
+
+def _extract_final_text_from_response(response: AIMessage) -> str:
+    """Extract final text from an AI response."""
+    if hasattr(response, 'content') and response.content:
+        final_text = _extract_text_from_content(response.content)
+        if final_text:
+            return final_text
+    return ""
+
+
+def _get_final_response_from_conversation(conversation: list, iteration: int) -> str:
+    """Get final response from conversation, with fallback."""
+    if conversation and isinstance(conversation[-1], AIMessage):
+        last_response = conversation[-1]
+        final_text = _extract_final_text_from_response(last_response)
+        if final_text:
+            return final_text
+    
+    return f"I've processed your request through {iteration} iterations and gathered the necessary information."
+
+
+def _execute_iterative_tool_calls(llm_with_tools, messages: list, max_iterations: int = 3) -> str:
+    """Execute iterative tool calls until the LLM stops making tool calls or max iterations reached."""
+    conversation = messages[:]
+    iteration = 0
+    
+    while iteration < max_iterations:
+        iteration += 1
+        logger.info(f"Tool calling iteration {iteration}/{max_iterations}")
+        
+        response, tool_messages = _handle_single_iteration(llm_with_tools, conversation)
+        conversation.append(response)
+        
+        # If no tool calls, we're done
+        if not tool_messages:
+            final_text = _extract_final_text_from_response(response)
+            if final_text:
+                return final_text
+            return "I've processed your request and gathered the available information."
+        
+        # Continue with next iteration
+        conversation.extend(tool_messages)
+        logger.info(f"Iteration {iteration}: Executed {len(tool_messages)} tools, continuing...")
+    
+    # Max iterations reached
+    return _get_final_response_from_conversation(conversation, iteration)
+
+
 def _process_tool_calls(response: AIMessage, llm_with_tools, messages: list) -> Dict[str, Any]:
-    """Process tool calls from the LLM response using proper LangChain pattern."""
+    """Process tool calls from the LLM response using iterative tool calling pattern."""
     updates = {}
     
     if not (hasattr(response, 'tool_calls') and response.tool_calls):
@@ -335,19 +379,17 @@ def _process_tool_calls(response: AIMessage, llm_with_tools, messages: list) -> 
             updates["final_response"] = "I apologize, but I'm having trouble generating a response. Please try rephrasing your request."
         return updates
     
-    logger.info(f"Response generator made {len(response.tool_calls)} tool calls")
-    
-    # Execute tool calls and create ToolMessage objects
-    tool_messages = _execute_tool_calls_and_create_tool_messages(response)
+    logger.info(f"Response generator made {len(response.tool_calls)} tool calls - starting iterative execution")
     
     try:
-        # Generate final response using proper LangChain pattern
-        final_text = _generate_final_response_from_tool_results(llm_with_tools, messages, response, tool_messages)
+        # Use iterative tool calling to handle multiple rounds
+        final_text = _execute_iterative_tool_calls(llm_with_tools, messages)
         updates["final_response"] = final_text
             
     except Exception as e:
-        logger.error(f"Error generating final response after tool calls: {e}")
-        # Create fallback response
+        logger.error(f"Error in iterative tool calling: {e}")
+        # Fallback: execute just the first round of tools
+        tool_messages = _execute_tool_calls_and_create_tool_messages(response)
         updates["final_response"] = _create_fallback_response(response, tool_messages)
     
     return updates
