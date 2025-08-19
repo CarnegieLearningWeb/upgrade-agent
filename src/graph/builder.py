@@ -1,8 +1,8 @@
 """
 LangGraph builder for UpGradeAgent.
 
-This module builds the 5-node LangGraph workflow with proper routing
-between nodes based on the conversation state.
+This module builds the single-node LangGraph workflow with one intelligent
+agent that can handle all requests end-to-end with iterative tool calling.
 """
 
 import logging
@@ -13,11 +13,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from langchain_core.runnables import RunnableConfig
 
 from .state import AgentState
-from ..nodes.analyzer import analyzer_node, analyzer_routing
-from ..nodes.gatherer import gatherer_node, gatherer_routing
-from ..nodes.confirmation import confirmation_handler, confirmation_routing
-from ..nodes.executor import tool_executor, executor_routing
-from ..nodes.response import response_generator_node, response_routing
+from ..nodes.intelligent_agent import intelligent_agent_node, intelligent_agent_routing
 
 logger = logging.getLogger(__name__)
 
@@ -26,72 +22,34 @@ def build_upgrade_agent_graph():
     """
     Build the complete UpGradeAgent LangGraph workflow.
     
-    Creates a 5-node graph with the following architecture:
-    1. Conversation Analyzer (LLM) - Intent classification and orchestration
-    2. Information Gatherer (LLM) - Data collection and validation
-    3. Confirmation Handler (Non-LLM) - Safety confirmations for destructive actions
-    4. Tool Executor (Non-LLM) - API execution layer
-    5. Response Generator (LLM) - All user-facing communication
+    Creates a single-node graph with the following architecture:
+    1. Intelligent Agent (LLM) - Handles all requests end-to-end with iterative tool calling
+    
+    The agent has access to all tools from the original 5-node architecture:
+    - API tools for data gathering and system interaction
+    - Action tools for experiment management and user simulation  
+    - Utility tools for schema information and educational content
+    - State management tools for complex workflows
     
     Returns:
         Compiled LangGraph workflow
     """
-    logger.info("Building UpGradeAgent LangGraph workflow")
+    logger.info("Building UpGradeAgent single-node LangGraph workflow")
     
     # Create the state graph
     workflow = StateGraph(AgentState)
     
-    # Add all nodes
-    workflow.add_node("conversation_analyzer", analyzer_node)
-    workflow.add_node("information_gatherer", gatherer_node)
-    workflow.add_node("confirmation_handler", confirmation_handler)
-    workflow.add_node("tool_executor", tool_executor)
-    workflow.add_node("response_generator", response_generator_node)
+    # Add the single intelligent agent node
+    workflow.add_node("intelligent_agent", intelligent_agent_node)
     
     # Set entry point
-    workflow.set_entry_point("conversation_analyzer")
+    workflow.set_entry_point("intelligent_agent")
     
-    # Add conditional edges with routing functions
+    # Add conditional edge (always routes to END)
     workflow.add_conditional_edges(
-        "conversation_analyzer",
-        analyzer_routing,
+        "intelligent_agent",
+        intelligent_agent_routing,
         {
-            "information_gatherer": "information_gatherer",
-            "tool_executor": "tool_executor", 
-            "response_generator": "response_generator"
-        }
-    )
-    
-    workflow.add_conditional_edges(
-        "information_gatherer",
-        gatherer_routing,
-        {
-            "confirmation_handler": "confirmation_handler",
-            "response_generator": "response_generator"
-        }
-    )
-    
-    workflow.add_conditional_edges(
-        "confirmation_handler", 
-        confirmation_routing,
-        {
-            "response_generator": "response_generator"
-        }
-    )
-    
-    workflow.add_conditional_edges(
-        "tool_executor",
-        executor_routing,
-        {
-            "conversation_analyzer": "conversation_analyzer"
-        }
-    )
-    
-    workflow.add_conditional_edges(
-        "response_generator",
-        response_routing,
-        {
-            "conversation_analyzer": "conversation_analyzer",
             "END": END
         }
     )
@@ -102,7 +60,7 @@ def build_upgrade_agent_graph():
     # Compile the workflow
     app = workflow.compile(checkpointer=memory)
     
-    logger.info("UpGradeAgent LangGraph workflow compiled successfully")
+    logger.info("UpGradeAgent single-node LangGraph workflow compiled successfully")
     return app
 
 
