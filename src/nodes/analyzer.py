@@ -64,13 +64,13 @@ CLASSIFICATION GUIDELINES:
 
 1. **direct_answer**: Choose when you can provide a complete answer immediately:
    - Greetings
-   - Questions you can answer without needing specific information
+   - Questions you can answer without needing specific information (e.g., What is A/B testing?)
    - Questions you can answer certainly based on the previous conversation context
    - Totally unrelated questions that doesn't need clarifications
    - User confirmations or denials of pending actions
 
 2. **needs_info**: Choose when you need to gather more information:
-   - Terminology/concepts that might be used in UpGrade
+   - Terminology/concepts that are used in UpGrade (e.g., app_context, unit_of_assignment, consistency_rule, post_experiment_rule, decision_point)
    - Creating, updating, or deleting experiments
    - Checking specific experiment details or status
    - User simulation tasks (initialization, assignments, decision points)
