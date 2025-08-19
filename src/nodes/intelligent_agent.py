@@ -365,11 +365,19 @@ async def intelligent_agent_node(state: AgentState) -> Dict[str, Any]:
         if not success:
             final_response = "I apologize, but I encountered an error while processing your request. Please try again."
         
+        # Update conversation history with this exchange
+        conversation_history = state.get("conversation_history", [])
+        conversation_history.append({
+            "user": state["user_input"],
+            "bot": final_response
+        })
+        
         # Get any state updates from tool execution
         result = {
             "final_response": final_response,
             "conversation_complete": True,
-            "current_state": "RESPONDING"
+            "current_state": "RESPONDING",
+            "conversation_history": conversation_history
         }
         
         # Copy any state updates from tool execution

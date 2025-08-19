@@ -60,12 +60,11 @@ async def handle_user_input(app, config, user_input: str) -> str:
         Bot's response
     """
     try:
-        # Create initial state with user input
-        initial_state = create_initial_state()
-        initial_state["user_input"] = user_input.strip()
+        # Use LangGraph's memory to get the current state
+        input_data = {"user_input": user_input.strip()}
         
-        # Run the workflow
-        result = await app.ainvoke(initial_state, config)
+        # Run the workflow (LangGraph handles state persistence automatically)
+        result = await app.ainvoke(input_data, config)
         
         # Extract response
         return result.get("final_response", "I apologize, but I couldn't process your request. Please try again.")
@@ -105,7 +104,7 @@ async def main():
                 
                 print("Bot: ", end="", flush=True)
                 
-                # Process the input
+                # Process the input (LangGraph manages conversation state)
                 response = await handle_user_input(app, config, user_input)
                 print(response)
                 print()  # Add blank line for readability
