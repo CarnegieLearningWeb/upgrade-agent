@@ -6,7 +6,7 @@ and manages conversation flow in the LangGraph architecture.
 """
 
 import logging
-from typing import Dict, Any, cast
+from typing import Dict, Any, cast, Optional
 
 from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
@@ -99,8 +99,8 @@ CONFIDENCE LEVELS:
 You MUST use the analyze_user_request tool to classify the intent. When there is confirmation context, also set the user_confirmed parameter appropriately."""
 
 
-def _process_tool_calls(response: AIMessage, state: AgentState) -> Dict[str, Any]:
-    """Process tool calls from the LLM response."""
+def _process_tool_calls(response: AIMessage, state: AgentState) -> Optional[Dict[str, Any]]:
+    """Process tool calls from the LLM response and return state updates."""
     if not (hasattr(response, 'tool_calls') and response.tool_calls):
         logger.warning("Analyzer did not make any tool calls")
         return {
@@ -139,6 +139,9 @@ def _process_tool_calls(response: AIMessage, state: AgentState) -> Dict[str, Any
                 "current_state": "RESPONDING", 
                 "errors": {**state.get("errors", {}), "analyzer": f"Unknown tool: {tool_name}"}
             }
+    
+    # Tools executed successfully, return None to indicate no error
+    return None
     
     return {}
 
@@ -186,11 +189,14 @@ def analyzer_node(state: AgentState) -> Dict[str, Any]:
         
         # Process tool calls
         tool_result = _process_tool_calls(response, state)
-        if tool_result:  # If there was an error or default fallback
+        if tool_result:  # If there was an error
             return tool_result
         
-        # Determine next state based on intent_type
-        intent_type = state.get("intent_type")
+        # Tools have updated the global state, need to get those updates
+        from ..tools.decorators import _state_ref
+        
+        # Determine next state based on intent_type from updated state
+        intent_type = (_state_ref.get("intent_type") if _state_ref else None) or state.get("intent_type")
         
         if intent_type == "direct_answer":
             next_state = "RESPONDING"
@@ -201,7 +207,16 @@ def analyzer_node(state: AgentState) -> Dict[str, Any]:
             
         logger.info(f"Analyzer routing to: {next_state}")
         
-        return {"current_state": next_state}
+        # Return state updates including tool modifications
+        result = {"current_state": next_state}
+        
+        # Copy any state updates from tool execution
+        if _state_ref:
+            for key in ["intent_type", "confidence", "user_request_summary", "user_confirmed"]:
+                if key in _state_ref:
+                    result[key] = _state_ref[key]
+        
+        return result
         
     except Exception as e:
         logger.error(f"Error in analyzer node: {e}")
