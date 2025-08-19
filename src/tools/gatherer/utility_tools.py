@@ -557,7 +557,23 @@ async def get_available_contexts() -> List[str]:
     try:
         response = await api_get_context_metadata()
         context_metadata = response.get("contextMetadata", {})
-        return list(context_metadata.keys())
+        context_names = list(context_metadata.keys())
+        
+        # Also store the full context metadata in the proper format for response generator
+        from src.tools.decorators import _state_ref
+        if _state_ref:
+            # Transform API response to tool-friendly format (same as get_context_metadata)
+            transformed_metadata = {}
+            for context_name, metadata in context_metadata.items():
+                transformed_metadata[context_name] = {
+                    "conditions": metadata.get("CONDITIONS", []),
+                    "group_types": metadata.get("GROUP_TYPES", []),
+                    "sites": metadata.get("EXP_IDS", []),  # EXP_IDS are site names
+                    "targets": metadata.get("EXP_POINTS", [])  # EXP_POINTS are target names
+                }
+            _state_ref["context_metadata"] = transformed_metadata
+        
+        return context_names
     except Exception as e:
         raise RuntimeError(f"Failed to get available contexts: {str(e)}")
 

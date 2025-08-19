@@ -24,7 +24,8 @@ def get_context_metadata() -> Optional[Dict[str, Any]]:
     from src.tools.decorators import _state_ref
     
     if _state_ref:
-        return _state_ref.get("context_metadata")
+        result = _state_ref.get("context_metadata")
+        return result
     return None
 
 

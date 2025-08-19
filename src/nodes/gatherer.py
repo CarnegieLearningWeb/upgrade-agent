@@ -278,14 +278,17 @@ async def gatherer_node(state: AgentState) -> Dict[str, Any]:
         if tool_result:  # If there was an error or completion signal
             return tool_result
         
+        # Tools have updated the global state, need to get those updates
+        from ..tools.decorators import _state_ref
+        
         # Determine next state based on what was accomplished
-        if state.get("action_needed"):
+        if state.get("action_needed") or (_state_ref and _state_ref.get("action_needed")):
             # We have an action ready for execution
             next_state = "CONFIRMING"
-        elif state.get("missing_params"):
+        elif state.get("missing_params") or (_state_ref and _state_ref.get("missing_params")):
             # We need more information from the user
             next_state = "RESPONDING"
-        elif state.get("errors"):
+        elif state.get("errors") or (_state_ref and _state_ref.get("errors")):
             # There were errors that need to be communicated
             next_state = "RESPONDING"
         else:
@@ -294,7 +297,30 @@ async def gatherer_node(state: AgentState) -> Dict[str, Any]:
             
         logger.info(f"Gatherer routing to: {next_state}")
         
-        return {"current_state": next_state}
+        # Return state updates including tool modifications
+        result = {"current_state": next_state}
+        
+        # Copy any state updates from tool execution
+        if _state_ref:
+            # Copy static data fields
+            for key in ["context_metadata", "experiment_names", "all_experiments"]:
+                if key in _state_ref:
+                    result[key] = _state_ref[key]
+            
+            # Copy gathered_info
+            if "gathered_info" in _state_ref:
+                result["gathered_info"] = _state_ref["gathered_info"]
+            
+            # Copy action-related fields  
+            for key in ["action_needed", "action_params", "missing_params"]:
+                if key in _state_ref:
+                    result[key] = _state_ref[key]
+            
+            # Copy errors
+            if "errors" in _state_ref:
+                result["errors"] = _state_ref["errors"]
+        
+        return result
         
     except Exception as e:
         logger.error(f"Error in gatherer node: {e}")
