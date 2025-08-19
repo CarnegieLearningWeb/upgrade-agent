@@ -46,12 +46,7 @@ def _check_confirmation_context(state: AgentState) -> str:
     if not (state.get("needs_confirmation") and state.get("confirmation_message")):
         return ""
     
-    user_input_lower = state["user_input"].lower().strip()
-    if any(word in user_input_lower for word in ["yes", "y", "confirm", "ok", "proceed", "go ahead"]):
-        return "The user has CONFIRMED the pending action. Proceed accordingly."
-    elif any(word in user_input_lower for word in ["no", "n", "cancel", "stop", "abort", "deny"]):
-        return "The user has DENIED/CANCELLED the pending action. Do not proceed."
-    return ""
+    return f"PENDING ACTION CONFIRMATION: {state['confirmation_message']}\nThe user is responding to this confirmation request. Analyze their response to determine if they are confirming (user_confirmed=True), denying (user_confirmed=False), or giving an unclear response (user_confirmed=None)."
 
 
 def _create_system_prompt(conversation_context: str, confirmation_context: str) -> str:
@@ -70,8 +65,9 @@ CLASSIFICATION GUIDELINES:
 1. **direct_answer**: Choose when you can provide a complete answer immediately:
    - Greetings
    - Questions you can answer without needing specific information
-   - Questions you can answer certainly based on the previous converstaion context
+   - Questions you can answer certainly based on the previous conversation context
    - Totally unrelated questions that doesn't need clarifications
+   - User confirmations or denials of pending actions
 
 2. **needs_info**: Choose when you need to gather more information:
    - Terminology/concepts that might be used in UpGrade
@@ -80,6 +76,12 @@ CLASSIFICATION GUIDELINES:
    - User simulation tasks (initialization, assignments, decision points)
    - Requests requiring specific data from UpGrade API
    - Complex queries needing parameter collection
+
+CONFIRMATION HANDLING:
+When there is a pending action (confirmation_context is provided):
+- If user clearly confirms (yes, okay, proceed, etc.) → set user_confirmed=True
+- If user clearly denies (no, cancel, stop, etc.) → set user_confirmed=False
+- If user gives an unclear response → set user_confirmed=None and may need clarification
 
 CONVERSATION FLOW MANAGEMENT:
 - If user is confirming/denying a previous action, classify appropriately
@@ -94,7 +96,7 @@ CONFIDENCE LEVELS:
 - 0.3-0.4: Low confidence, significant ambiguity
 - 0.0-0.2: Very unclear intent
 
-You MUST use the analyze_user_request tool to classify the intent."""
+You MUST use the analyze_user_request tool to classify the intent. When there is confirmation context, also set the user_confirmed parameter appropriately."""
 
 
 def _process_tool_calls(response: AIMessage, state: AgentState) -> Dict[str, Any]:
@@ -214,6 +216,7 @@ def analyzer_routing(state: AgentState) -> str:
     Routing function for the Conversation Analyzer node.
     
     Determines the next node based on analyzed intent and conversation state.
+    Uses LLM-based analysis rather than manual string parsing.
     
     Args:
         state: Current agent state
@@ -221,16 +224,13 @@ def analyzer_routing(state: AgentState) -> str:
     Returns:
         Next node name
     """
-    # Handle confirmation flow
-    if state.get("needs_confirmation") and state.get("confirmation_message"):
-        user_input_lower = state["user_input"].lower().strip()
-        
-        # Check for confirmation
-        if any(word in user_input_lower for word in ["yes", "y", "confirm", "ok", "proceed", "go ahead"]):
-            logger.info("User confirmed action, routing to tool_executor")
+    # Handle confirmation flow based on LLM analysis
+    if state.get("needs_confirmation") and state.get("user_confirmed") is not None:
+        if state.get("user_confirmed"):
+            logger.info("LLM detected user confirmed action, routing to tool_executor")
             return "tool_executor"
-        elif any(word in user_input_lower for word in ["no", "n", "cancel", "stop", "abort", "deny"]):
-            logger.info("User denied action, routing to response_generator")
+        else:
+            logger.info("LLM detected user denied action, routing to response_generator")
             return "response_generator"
     
     # Check if we just executed something and need to analyze results
