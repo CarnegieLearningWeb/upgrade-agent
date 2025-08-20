@@ -189,7 +189,7 @@ class UpGradeAPI:
             user_id=user_id,
             data=assign_request.model_dump(exclude_none=True)
         )
-        # Response is directly an array of AssignmentResult
+        # Response is directly an array of AssignmentResult  
         return [AssignmentResult(**item) for item in response.data] if response.data else []
     
     async def mark_decision_point(self, user_id: str, mark_request: MarkRequest) -> MarkResponse:
