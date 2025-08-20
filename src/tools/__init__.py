@@ -1,40 +1,51 @@
 """
-UpGradeAgent Tools
+UpGradeAgent Tools Package.
 
-This module contains LangGraph tools that wrap the UpGrade API client.
-Tools are organized into:
-- basic_tools: System and experiment management tools
-- simulation_tools: User simulation and testing tools
-- workflow_tools: Complex multi-step operations (future)
+This package contains all tool functions organized by LangGraph node type.
+Tools are automatically registered and enforce architectural boundaries.
 """
 
-from .basic_tools import (
-    check_upgrade_health,
-    get_context_metadata,
-    get_all_experiments,
-    get_experiment_details,
-    create_experiment,
-    update_experiment_status,
-    delete_experiment
+from .decorators import (
+    set_global_state,
+    auto_store,
+    auto_store_static,
+    handle_errors
 )
 
-from .simulation_tools import (
-    init_user,
-    assign_condition,
-    mark_decision_point
+from .registry import (
+    tool_registry,
+    register_analyzer_tool,
+    register_gatherer_tool,
+    register_executor_tool,
+    register_response_tool,
+    get_tools_for_node,
+    get_all_tools
 )
+
+# Import tool modules to trigger registration
+try:
+    from . import analyzer
+    from . import gatherer
+    from . import executor
+    from . import response
+except ImportError:
+    # Handle import errors gracefully during development
+    pass
+
 
 __all__ = [
-    # Basic tools
-    'check_upgrade_health',
-    'get_context_metadata',
-    'get_all_experiments',
-    'get_experiment_details',
-    'create_experiment',
-    'update_experiment_status',
-    'delete_experiment',
-    # Simulation tools
-    'init_user',
-    'assign_condition',
-    'mark_decision_point'
+    # Decorators
+    "set_global_state",
+    "auto_store",
+    "auto_store_static", 
+    "handle_errors",
+    
+    # Registry
+    "tool_registry",
+    "register_analyzer_tool",
+    "register_gatherer_tool",
+    "register_executor_tool",
+    "register_response_tool",
+    "get_tools_for_node",
+    "get_all_tools"
 ]
