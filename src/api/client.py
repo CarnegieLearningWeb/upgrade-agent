@@ -37,20 +37,16 @@ class UpGradeClient:
     
     def __init__(
         self,
-        base_url: Optional[str] = None,
-        timeout: Optional[int] = None,
         session: Optional[aiohttp.ClientSession] = None
     ):
         """
         Initialize the UpGrade API client.
         
         Args:
-            base_url: Base URL for the UpGrade API (defaults to config)
-            timeout: Request timeout in seconds (defaults to 30)
             session: Optional existing aiohttp session to reuse
         """
-        self.base_url = base_url or config.UPGRADE_API_URL
-        self.timeout = timeout or 30
+        self.base_url = config.UPGRADE_API_URL
+        self.timeout = config.UPGRADE_API_TIMEOUT
         self._session = session
         self._owned_session = session is None
         
@@ -61,7 +57,13 @@ class UpGradeClient:
     async def __aenter__(self) -> "UpGradeClient":
         """Async context manager entry."""
         if self._session is None:
+            # Create connector that prevents connection reuse issues
+            connector = aiohttp.TCPConnector(
+                force_close=True,  # THIS IS THE KEY FIX - close connections after each use
+                enable_cleanup_closed=True,  # Clean up closed SSL connections
+            )
             self._session = aiohttp.ClientSession(
+                connector=connector,
                 timeout=aiohttp.ClientTimeout(total=self.timeout)
             )
         return self
@@ -76,7 +78,13 @@ class UpGradeClient:
     def session(self) -> aiohttp.ClientSession:
         """Get or create the HTTP session."""
         if self._session is None:
+            # Create connector that prevents connection reuse issues
+            connector = aiohttp.TCPConnector(
+                force_close=True,  # THIS IS THE KEY FIX - close connections after each use
+                enable_cleanup_closed=True,  # Clean up closed SSL connections
+            )
             self._session = aiohttp.ClientSession(
+                connector=connector,
                 timeout=aiohttp.ClientTimeout(total=self.timeout)
             )
         return self._session
