@@ -36,7 +36,7 @@ def _build_conversation_context(state: AgentState) -> str:
     
     # Add conversation history
     if state.get("conversation_history"):
-        recent_history = state["conversation_history"][-5:]  # Last 5 exchanges
+        recent_history = state["conversation_history"][-10:]  # Last 10 exchanges
         history_text = ""
         for exchange in recent_history:
             history_text += f"User: {exchange.get('user', '')}\nBot: {exchange.get('bot', '')}\n"
@@ -51,7 +51,7 @@ def _build_conversation_context(state: AgentState) -> str:
     
     # Add execution log if any
     if state.get("execution_log"):
-        recent_executions = state["execution_log"][-3:]  # Last 3 executions
+        recent_executions = state["execution_log"][-10:]  # Last 10 executions
         exec_summary = []
         for exec_log in recent_executions:
             status = exec_log.get("status", "unknown")
@@ -93,8 +93,8 @@ BEHAVIOR GUIDELINES:
    - No need to ask for confirmation before executing tools (including delete_experiment)
 
 4. **Be Smart About Information Gathering**:
-   - Use context metadata to understand what options are available
    - Validate parameters against schemas before execution
+   - Use context metadata to understand what options are available
    - Look up experiment IDs from names when needed
    - Gather missing information progressively
 
@@ -113,10 +113,10 @@ User: "What contexts are available?"
 → Call get_available_contexts() 
 → Response: "Available contexts: assign-prog, retail-app, survey-tool"
 
-User: "Create an experiment called 'Math Hints' in assign-prog context"  
+User: "Create an experiment called 'Math Hints' in assign-prog context"
+→ Call get_create_experiment_schema() to check the required params
 → Call get_available_contexts() to validate context
-→ Call get_conditions_for_context() and get_decision_points_for_context() to get available options
-→ If missing required params, ask briefly: "I need the conditions for this experiment. Should I use control/treatment with 50/50 split?"
+→ Call get_decision_points_for_context() and get_conditions_for_context() to get available options
 → Once all params collected, call create_experiment()
 → Response: "✅ Created 'Math Hints' experiment in assign-prog context with control/treatment conditions."
 
@@ -217,7 +217,7 @@ async def _handle_single_iteration(llm_with_tools, conversation: list, state: Ag
     return response, tool_messages
 
 
-async def _execute_iterative_tool_calls(llm_with_tools, messages: list, state: AgentState, max_iterations: int = 10) -> tuple[bool, str]:
+async def _execute_iterative_tool_calls(llm_with_tools, messages: list, state: AgentState, max_iterations: int = 30) -> tuple[bool, str]:
     """Execute iterative tool calls until the LLM provides a final response.
     
     Returns:

@@ -106,11 +106,8 @@ def get_core_terms() -> Dict[str, Any]:
             "definition": "The current operational phase of an experiment.",
             "statuses": {
                 "inactive": "Default condition is served to all users; no experimental conditions are distributed",
-                "preview": "Preview condition assignments with test users (NOT SUPPORTED in MVP)",
-                "scheduled": "Same as Inactive but scheduled to start on specified date (NOT SUPPORTED in MVP)",
                 "enrolling": "Experiment is actively running; included users are assigned experimental conditions based on assignment rules",
-                "enrollment_complete": "Experiment has ended; Post Experiment Rule determines what conditions users receive",
-                "cancelled": "Experiment has been cancelled for some reason (NOT SUPPORTED in MVP)"
+                "enrollment_complete": "Experiment has ended; Post Experiment Rule determines what conditions users receive"
             }
         }
     }
@@ -299,7 +296,12 @@ def get_create_experiment_schema() -> Dict[str, Any]:
             "3. Get conditions → call get_conditions_for_context(context)",
             "4. If assignment_unit='group' → call get_group_types_for_context(context)",
             "5. Validate all parameters before calling set_action_params()"
-        ]
+        ],
+        "suggested_next_steps": {
+            "confirm_settings": "Confirm the created experiment settings",
+            "include_participants": "If inclusion users/groups are empty and filter_mode is excludeAll, suggest adding specific users/groups or all participants (filter_mode=includeAll)",
+            "start_experiment": "If inclusion users/groups exist or filter_mode is includeAll, suggest starting the experiment (status=enrolling)"
+        }
     }
 
 
@@ -377,7 +379,12 @@ def get_update_experiment_schema() -> Dict[str, Any]:
             "3. For context-dependent changes → call appropriate helper tools",
             "4. Only set parameters that are being changed in action_params",
             "5. Tool will automatically merge with existing experiment data"
-        ]
+        ],
+        "suggested_next_steps": {
+            "confirm_settings": "Confirm the updated experiment settings",
+            "include_participants": "If inclusion users/groups are empty and filter_mode is excludeAll, suggest adding specific users/groups or all participants (filter_mode=includeAll)",
+            "start_experiment": "If inclusion users/groups exist or filter_mode is includeAll, suggest starting the experiment (status=enrolling)"
+        }
     }
 
 
@@ -396,14 +403,10 @@ def get_update_experiment_status_schema() -> Dict[str, Any]:
             "status": {
                 "type": "str",
                 "validation": "Must be valid experiment status",
-                "choices": ["inactive", "preview", "scheduled", "enrolling", "enrollmentComplete", "cancelled", "archived"],
-                "common_transitions": {
-                    "inactive": ["preview", "scheduled", "enrolling"],
-                    "preview": ["inactive", "scheduled", "enrolling"],
-                    "scheduled": ["inactive", "enrolling", "cancelled"],
-                    "enrolling": ["enrollmentComplete", "cancelled"],
-                    "enrollmentComplete": ["archived"],
-                    "cancelled": ["archived"]
+                "choices": ["inactive", "enrolling", "enrollmentComplete"],
+                "transitions": {
+                    "inactive": ["enrolling"],
+                    "enrolling": ["enrollmentComplete"]
                 }
             }
         },
@@ -417,7 +420,11 @@ def get_update_experiment_status_schema() -> Dict[str, Any]:
             "2. Validate status is valid → check against choices list",
             "3. Set experiment_id and status in action_params",
             "4. If the status is updated to enrolling, but if the filter_mode is excludeAll and inclusion_users and exclusion_groups are empty, notify the user that no participants will be enrolled in the experiment"
-        ]
+        ],
+        "suggested_next_steps": {
+            "confirm_settings": "Confirm the updated experiment settings",
+            "include_participants": "If experiment is enrolling, and if inclusion users/groups are empty and filter_mode is excludeAll, suggest adding specific users/groups or all participants (filter_mode=includeAll)",
+        }
     }
 
 
@@ -543,6 +550,57 @@ def get_mark_decision_point_schema() -> Dict[str, Any]:
             "2. Get decision_point (site, target) from user request",
             "3. Get assigned_condition from prior assignment call or user specification",
             "4. If experiment specified by name → call get_experiment_names() to get ID",
+            "5. Set parameters in action_params"
+        ]
+    }
+
+
+@tool
+@register_gatherer_tool("get_visit_decision_point_schema")
+@auto_store("visit_decision_point_schema")
+def get_visit_decision_point_schema() -> Dict[str, Any]:
+    """Get schema for visit_decision_point tool (Simulates complete decision point visit: /init, /assign, /mark) parameters."""
+    return {
+        "required_parameters": {
+            "user_id": {
+                "type": "str"
+            },
+            "context": {
+                "type": "str",
+                "validation": "Must be from available contexts",
+                "helper_tool": "get_available_contexts() to get valid options"
+            },
+            "site": {
+                "type": "str"
+            },
+            "target": {
+                "type": "str"
+            }
+        },
+        "optional_parameters": {
+            "group": {
+                "type": "Dict[str, List[str]]",
+                "format": {"schoolId": ["school1"], "classId": ["class1"], "instructorId": ["instructor1"]},
+                "validation": "group_types must be valid for the context",
+                "helper_tool": "get_group_types_for_context(context) for valid group types"
+            },
+            "working_group": {
+                "type": "Dict[str, str]", 
+                "format": {"schoolId": "school1", "classId": "class1", "instructorId": "instructor1"},
+                "validation": "group_types must be valid for the context",
+                "helper_tool": "get_group_types_for_context(context) for valid group types"
+            }
+        },
+        "validation_dependencies": {
+            "context_existence": "Context must exist in UpGrade system",
+            "group_types": "All group types in both 'group' and 'working_group' must be valid for the context (if provided)",
+            "working_group_subset": "working_group values should correspond to entries in group lists (if both provided)"
+        },
+        "parameter_gathering_flow": [
+            "1. Get user_id from user request",
+            "2. Get context from user request → validate with get_available_contexts()",
+            "3. Get site and target from user request",
+            "4. If group membership needed → call get_group_types_for_context(context) for validation",
             "5. Set parameters in action_params"
         ]
     }

@@ -153,7 +153,7 @@ async def init_experiment_user(action_params: Dict[str, Any]) -> ToolInitExperim
     """
     try:
         _validate_required_params(action_params, ['user_id'])
-        user_id = action_params.pop('user_id')
+        user_id = action_params['user_id']
         
         # Build InitExperimentUserRequest from action_params
         init_request: InitExperimentUserRequest = {}
@@ -272,4 +272,94 @@ async def mark_decision_point(action_params: Dict[str, Any]) -> ToolMarkExperime
         return tool_response
     except Exception as e:
         _log_execution("mark_decision_point", False, error=str(e))
+        raise
+
+
+@tool
+@register_executor_tool("visit_decision_point")
+async def visit_decision_point(action_params: Dict[str, Any]) -> ToolMarkExperimentResponse:
+    """
+    Simulate a decision point visit (calls /init, /assign, and /mark)
+    """
+    try:
+        _validate_required_params(action_params, ['user_id', 'context', 'site', 'target'])
+        user_id = action_params['user_id']
+        context = action_params['context']
+        site = action_params['site']
+        target = action_params['target']
+
+        # Build InitExperimentUserRequest from action_params
+        init_request: InitExperimentUserRequest = {}
+        
+        if 'group' in action_params:
+            init_request['group'] = action_params['group']
+            
+        if 'working_group' in action_params:
+            init_request['workingGroup'] = action_params['working_group']
+        
+        await api_init_experiment_user(user_id, init_request)
+
+        # Build ExperimentAssignmentRequest from action_params
+        assignment_request: ExperimentAssignmentRequest = {
+            'context': context
+        }
+        
+        assign_response = await api_get_decision_point_assignments(user_id, assignment_request)
+
+        # Response format: {"data": [ExperimentAssignment, ...]}
+        tool_assignments: List[ToolExperimentAssignment] = []
+        mark_assigned_condition: Optional[MarkAssignedCondition] = None
+        
+        if 'data' in assign_response and isinstance(assign_response['data'], list):
+            for assignment in assign_response['data']:
+                # Convert assigned conditions from API format to tool format
+                assigned_conditions: List[ToolAssignedCondition] = [
+                    {
+                        'condition_code': condition.get('conditionCode', ''),
+                        'experiment_id': condition.get('experimentId', None)
+                    }
+                    for condition in assignment.get('assignedCondition', [])
+                ]
+
+                tool_assignment: ToolExperimentAssignment = {
+                    'site': assignment.get('site', 'unknown'),
+                    'target': assignment.get('target', 'unknown'),
+                    'assigned_conditions': assigned_conditions
+                }
+                tool_assignments.append(tool_assignment)
+
+                # Set the mark_assigned_condition that matches the site, target, and experiment_id
+                if tool_assignment['site'] == site and tool_assignment['target'] == target and assigned_conditions:
+                    mark_assigned_condition = {
+                        'conditionCode': assigned_conditions[0].get('condition_code', None),
+                        'experimentId': assigned_conditions[0].get('experiment_id', None)
+                    }
+                    break
+        
+        # Build MarkData
+        mark_data: MarkData = {
+            'site': site,
+            'target': target,
+            'assignedCondition': mark_assigned_condition
+        }
+        
+        # Build MarkExperimentRequest
+        mark_request: MarkExperimentRequest = {
+            'data': mark_data
+        }
+        
+        mark_response = await api_mark_decision_point(user_id, mark_request)
+
+        tool_response: ToolMarkExperimentResponse = {
+            'user_id': mark_response.get('userId', 'unknown'),
+            'site': mark_response.get('site', 'unknown'),
+            'target': mark_response.get('target', 'unknown'),
+            'experiment_id': mark_response.get('experimentId', None),
+            'condition_code': mark_response.get('condition', None)
+        }
+
+        _log_execution("visit_decision_point", True, tool_response)
+        return tool_response
+    except Exception as e:
+        _log_execution("visit_decision_point", False, error=str(e))
         raise

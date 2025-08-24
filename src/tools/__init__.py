@@ -14,7 +14,7 @@ from .decorators import (
 
 from .registry import (
     tool_registry,
-    register_analyzer_tool,
+    # register_analyzer_tool,
     register_gatherer_tool,
     register_executor_tool,
     register_response_tool,
@@ -42,7 +42,7 @@ __all__ = [
     
     # Registry
     "tool_registry",
-    "register_analyzer_tool",
+    # "register_analyzer_tool",
     "register_gatherer_tool",
     "register_executor_tool",
     "register_response_tool",

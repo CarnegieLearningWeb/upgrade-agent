@@ -203,6 +203,7 @@ class GatheredInfo(TypedDict, total=False):
     init_experiment_user_schema: Dict[str, Any]
     get_decision_point_assignments_schema: Dict[str, Any]
     mark_decision_point_schema: Dict[str, Any]
+    visit_decision_point_schema: Dict[str, Any]
     
     # Context-specific information (dynamic keys like "conditions_for_assign-prog")
     # These will be stored with pattern: f"{info_type}_for_{context}"

@@ -85,12 +85,12 @@ class ToolRegistry:
 tool_registry = ToolRegistry()
 
 
-def register_analyzer_tool(tool_name: str):
-    """Decorator to register a tool for the Conversation Analyzer node."""
-    def decorator(func: Callable) -> Callable:
-        tool_registry.register_tool("analyzer", tool_name, func)
-        return func
-    return decorator
+# def register_analyzer_tool(tool_name: str):
+#     """Decorator to register a tool for the Conversation Analyzer node."""
+#     def decorator(func: Callable) -> Callable:
+#         tool_registry.register_tool("analyzer", tool_name, func)
+#         return func
+#     return decorator
 
 
 def register_gatherer_tool(tool_name: str):

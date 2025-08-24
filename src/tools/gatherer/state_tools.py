@@ -21,23 +21,22 @@ def set_action_needed(
         "update_experiment_status", 
         "init_experiment_user", 
         "get_decision_point_assignments", 
-        "mark_decision_point"
-    ],
-    reasoning: str
+        "mark_decision_point",
+        "visit_decision_point"
+    ]
 ) -> str:
     """
     Set what action is needed for Tool Executor.
     
     Args:
         action: The action that needs to be performed
-        reasoning: Explanation of why this action is needed
     """
     from src.tools.decorators import _state_ref
     
     if _state_ref:
         _state_ref['action_needed'] = action
     
-    return f"Action set to '{action}'. {reasoning}"
+    return f"Action set to '{action}'."
 
 
 @tool
