@@ -416,7 +416,7 @@ def get_update_experiment_status_schema() -> Dict[str, Any]:
             "1. Validate experiment exists → call get_experiment_names() or get_experiment_details()",
             "2. Validate status is valid → check against choices list",
             "3. Set experiment_id and status in action_params",
-            "4. No confirmation needed for status updates (non-destructive)"
+            "4. If the status is updated to enrolling, but if the filter_mode is excludeAll and inclusion_users and exclusion_groups are empty, notify the user that no participants will be enrolled in the experiment"
         ]
     }
 
@@ -440,8 +440,7 @@ def get_delete_experiment_schema() -> Dict[str, Any]:
         },
         "parameter_gathering_flow": [
             "1. Validate experiment exists → call get_experiment_names() or get_experiment_details()",
-            "2. Set experiment_id in action_params",
-            "3. Confirmation will be handled automatically by Confirmation Handler"
+            "2. Set experiment_id in action_params"
         ]
     }
 
