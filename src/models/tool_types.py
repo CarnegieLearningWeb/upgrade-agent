@@ -53,6 +53,13 @@ class ToolContextMetadata(TypedDict):
     targets: List[str]
 
 
+class ToolEnrollmentDetailsResponse(TypedDict):
+    """Response from get_enrollment_details tool."""
+    total_users_enrolled: int
+    total_users_excluded: int
+    enrollment_by_condition: Dict[str, int]
+
+
 class ToolInitExperimentUserResponse(TypedDict):
     """Response from init_experiment_user tool."""
     user_id: str

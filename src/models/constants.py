@@ -19,6 +19,7 @@ EXPERIMENTS_ENDPOINT = "/experiments"
 EXPERIMENT_NAMES_ENDPOINT = "/experiments/names"
 EXPERIMENT_SINGLE_ENDPOINT = "/experiments/single"
 EXPERIMENT_STATE_ENDPOINT = "/experiments/state"
+ENROLLMENT_DETAILS_ENDPOINT = "/stats/enrollment/detail"
 
 # Simulation endpoint paths
 INIT_ENDPOINT = "/v6/init"

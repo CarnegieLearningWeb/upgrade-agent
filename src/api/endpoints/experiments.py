@@ -11,7 +11,8 @@ from src.models.constants import (
     EXPERIMENTS_ENDPOINT,
     EXPERIMENT_NAMES_ENDPOINT,
     EXPERIMENT_SINGLE_ENDPOINT,
-    EXPERIMENT_STATE_ENDPOINT
+    EXPERIMENT_STATE_ENDPOINT,
+    ENROLLMENT_DETAILS_ENDPOINT
 )
 from src.models.types import CreateExperimentRequest
 
@@ -69,6 +70,25 @@ async def get_experiment_details(experiment_id: str) -> Dict[str, Any]:
     """
     client = get_client()
     return await client.get(f"{EXPERIMENT_SINGLE_ENDPOINT}/{experiment_id}")
+
+
+async def get_enrollment_details(experiment_id: str) -> Dict[str, Any]:
+    """
+    POST /stats/enrollment/detail - Get experiment enrollment details.
+    
+    Args:
+        experiment_id: UUID of the experiment to get the enrollment details
+        
+    Returns:
+        Experiment enrollment details data
+        
+    Raises:
+        APIError: For network errors or server issues
+        AuthenticationError: If authentication token is invalid or missing
+        ExperimentNotFoundError: If experiment with given ID doesn't exist
+    """
+    client = get_client()
+    return await client.post(ENROLLMENT_DETAILS_ENDPOINT, data={"experimentId": experiment_id})
 
 
 async def create_experiment(experiment_data: Union[CreateExperimentRequest, Dict[str, Any]]) -> Dict[str, Any]:

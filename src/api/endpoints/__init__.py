@@ -9,6 +9,7 @@ from .experiments import (
     get_experiment_names,
     get_all_experiments, 
     get_experiment_details,
+    get_enrollment_details,
     create_experiment,
     update_experiment,
     update_experiment_status,
@@ -28,7 +29,8 @@ __all__ = [
     # Experiment endpoints
     "get_experiment_names",
     "get_all_experiments",
-    "get_experiment_details", 
+    "get_experiment_details",
+    "get_enrollment_details",
     "create_experiment",
     "update_experiment",
     "update_experiment_status",

@@ -17,11 +17,13 @@ from src.api.endpoints.system import (
 from src.api.endpoints.experiments import (
     get_experiment_names as api_get_experiment_names,
     get_all_experiments as api_get_all_experiments, 
-    get_experiment_details as api_get_experiment_details
+    get_experiment_details as api_get_experiment_details,
+    get_enrollment_details as api_get_enrollment_details
 )
 from src.models.tool_types import (
     ToolHealthResponse,
     ToolContextMetadata,
+    ToolEnrollmentDetailsResponse,
     ToolExperimentName,
     SimplifiedExperiment
 )
@@ -116,3 +118,33 @@ async def get_experiment_details(experiment_id: str) -> SimplifiedExperiment:
         
     response = await api_get_experiment_details(experiment_id)
     return _transform_experiment_data(response)
+
+
+@tool
+@register_gatherer_tool("get_enrollment_details")
+@auto_store("enrollment_details")
+@handle_errors("api")
+async def get_enrollment_details(experiment_id: str) -> ToolEnrollmentDetailsResponse:
+    """
+    Get experiment enrollment details, including total_users_enrolled, total_users_excluded, and enrollment_by_condition.
+    
+    Args:
+        experiment_id: UUID of the experiment
+    """
+    if not experiment_id or not experiment_id.strip():
+        raise ValueError("experiment_id is required and cannot be empty")
+    
+    details_response = await api_get_experiment_details(experiment_id)
+    condition_id_to_code = {}
+    for condition in details_response.get("conditions", []):
+        condition_id_to_code[condition["id"]] = condition["conditionCode"]
+
+    enrollment_response = await api_get_enrollment_details(experiment_id)
+    enrollment_by_condition = {}
+    for condition in enrollment_response.get("conditions", []):
+        enrollment_by_condition[condition_id_to_code[condition["id"]]] = condition["users"]
+    return {
+        "total_users_enrolled": enrollment_response.get("users", 0),
+        "total_users_excluded": enrollment_response.get("usersExcluded", 0),
+        "enrollment_by_condition": enrollment_by_condition
+    }
