@@ -8,6 +8,7 @@ log all executions in the execution_log.
 
 from langchain.tools import tool
 from typing import Dict, List, Any, Optional, Union
+from uuid import uuid4
 
 from src.tools.registry import register_executor_tool
 from src.api.endpoints.experiments import (
@@ -28,7 +29,7 @@ from src.models.types import (
 )
 from src.models.tool_types import ( 
     SimplifiedExperiment, ToolInitExperimentUserResponse, ToolAssignedCondition,
-    ToolExperimentAssignment, ToolMarkExperimentResponse
+    ToolExperimentAssignment, ToolMarkExperimentResponse, ToolConditionBalanceResponse
 )
 from src.utils.execution_logging import _log_execution
 from src.utils.tool_validation import _validate_required_params
@@ -328,7 +329,7 @@ async def visit_decision_point(action_params: Dict[str, Any]) -> ToolMarkExperim
                 }
                 tool_assignments.append(tool_assignment)
 
-                # Set the mark_assigned_condition that matches the site, target, and experiment_id
+                # Set the mark_assigned_condition that matches the site and target
                 if tool_assignment['site'] == site and tool_assignment['target'] == target and assigned_conditions:
                     mark_assigned_condition = {
                         'conditionCode': assigned_conditions[0].get('condition_code', None),
@@ -362,4 +363,103 @@ async def visit_decision_point(action_params: Dict[str, Any]) -> ToolMarkExperim
         return tool_response
     except Exception as e:
         _log_execution("visit_decision_point", False, error=str(e))
+        raise
+
+
+@tool
+@register_executor_tool("test_condition_balance")
+async def test_condition_balance(action_params: Dict[str, Any]) -> ToolConditionBalanceResponse:
+    """
+    Simulate multiple decision point visits for testing condition balance (calls /init, /assign, and /mark interatively)
+    """
+    try:
+        _validate_required_params(action_params, ['num_users', 'context', 'site', 'target'])
+        num_users = action_params['num_users']
+        context = action_params['context']
+        site = action_params['site']
+        target = action_params['target']
+
+        # Enrollment by condition dict (condition_code: enrollment_data)
+        enrollment_by_condition: Dict[str, int] = {}
+
+        for i in range(min(num_users, 1000)):
+            user_id = str(uuid4())
+
+            # Build InitExperimentUserRequest from action_params
+            init_request: InitExperimentUserRequest = {}
+
+            if 'group' in action_params:
+                init_request['group'] = action_params['group']
+
+            if 'working_group' in action_params:
+                init_request['workingGroup'] = action_params['working_group']
+
+            await api_init_experiment_user(user_id, init_request)
+
+            # Build ExperimentAssignmentRequest from action_params
+            assignment_request: ExperimentAssignmentRequest = {
+                'context': context
+            }
+
+            assign_response = await api_get_decision_point_assignments(user_id, assignment_request)
+
+            # Response format: {"data": [ExperimentAssignment, ...]}
+            tool_assignments: List[ToolExperimentAssignment] = []
+            mark_assigned_condition: Optional[MarkAssignedCondition] = None
+            
+            if 'data' in assign_response and isinstance(assign_response['data'], list):
+                for assignment in assign_response['data']:
+                    # Convert assigned conditions from API format to tool format
+                    assigned_conditions: List[ToolAssignedCondition] = [
+                        {
+                            'condition_code': condition.get('conditionCode', ''),
+                            'experiment_id': condition.get('experimentId', None)
+                        }
+                        for condition in assignment.get('assignedCondition', [])
+                    ]
+
+                    tool_assignment: ToolExperimentAssignment = {
+                        'site': assignment.get('site', 'unknown'),
+                        'target': assignment.get('target', 'unknown'),
+                        'assigned_conditions': assigned_conditions
+                    }
+                    tool_assignments.append(tool_assignment)
+
+                    # Set the mark_assigned_condition that matches the site and target
+                    if tool_assignment['site'] == site and tool_assignment['target'] == target and assigned_conditions:
+                        mark_assigned_condition = {
+                            'conditionCode': assigned_conditions[0].get('condition_code', None),
+                            'experimentId': assigned_conditions[0].get('experiment_id', None)
+                        }
+                        break
+            
+            # Build MarkData
+            mark_data: MarkData = {
+                'site': site,
+                'target': target,
+                'assignedCondition': mark_assigned_condition
+            }
+            
+            # Build MarkExperimentRequest
+            mark_request: MarkExperimentRequest = {
+                'data': mark_data
+            }
+
+            mark_response = await api_mark_decision_point(user_id, mark_request)
+            condition_code = mark_response.get('condition', None)
+
+            if condition_code:
+                enrollment_by_condition[condition_code] = enrollment_by_condition.get(condition_code, 0) + 1
+
+        tool_response: ToolConditionBalanceResponse = {
+            'num_users': num_users,
+            'site': site,
+            'target': target,
+            'enrollment_by_condition': enrollment_by_condition
+        }
+
+        _log_execution("test_condition_balance", True, tool_response)
+        return tool_response
+    except Exception as e:
+        _log_execution("test_condition_balance", False, error=str(e))
         raise

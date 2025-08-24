@@ -607,6 +607,59 @@ def get_visit_decision_point_schema() -> Dict[str, Any]:
 
 
 @tool
+@register_gatherer_tool("get_test_condition_balance_schema")
+@auto_store("test_condition_balance_schema")
+def get_test_condition_balance_schema() -> Dict[str, Any]:
+    """Get schema for test_condition_balance tool (Simulates multiple decision point visits for testing condition balance) parameters."""
+    return {
+        "required_parameters": {
+            "num_users": {
+                "type": "int",
+                "validation": "Must be positive integer, capped at 1000 for performance"
+            },
+            "context": {
+                "type": "str",
+                "validation": "Must be from available contexts",
+                "helper_tool": "get_available_contexts() to get valid options"
+            },
+            "site": {
+                "type": "str"
+            },
+            "target": {
+                "type": "str"
+            }
+        },
+        "optional_parameters": {
+            "group": {
+                "type": "Dict[str, List[str]]",
+                "format": {"schoolId": ["school1"], "classId": ["class1"], "instructorId": ["instructor1"]},
+                "validation": "group_types must be valid for the context",
+                "helper_tool": "get_group_types_for_context(context) for valid group types"
+            },
+            "working_group": {
+                "type": "Dict[str, str]", 
+                "format": {"schoolId": "school1", "classId": "class1", "instructorId": "instructor1"},
+                "validation": "group_types must be valid for the context",
+                "helper_tool": "get_group_types_for_context(context) for valid group types"
+            }
+        },
+        "validation_dependencies": {
+            "context_existence": "Context must exist in UpGrade system",
+            "num_users_range": "num_users must be positive and will be capped at 1000",
+            "group_types": "All group types in both 'group' and 'working_group' must be valid for the context (if provided)",
+            "working_group_subset": "working_group values should correspond to entries in group lists (if both provided)"
+        },
+        "parameter_gathering_flow": [
+            "1. Get num_users from user request (validate positive integer)",
+            "2. Get context from user request → validate with get_available_contexts()",
+            "3. Get site and target from user request",
+            "4. If group membership needed → call get_group_types_for_context(context) for validation",
+            "5. Set parameters in action_params"
+        ]
+    }
+
+
+@tool
 @register_gatherer_tool("get_available_contexts")
 @auto_store("available_contexts")
 async def get_available_contexts() -> List[str]:

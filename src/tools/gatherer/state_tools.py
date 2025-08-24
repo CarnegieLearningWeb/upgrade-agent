@@ -22,7 +22,8 @@ def set_action_needed(
         "init_experiment_user", 
         "get_decision_point_assignments", 
         "mark_decision_point",
-        "visit_decision_point"
+        "visit_decision_point",
+        "test_condition_balance"
     ]
 ) -> str:
     """

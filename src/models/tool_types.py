@@ -82,6 +82,14 @@ class ToolMarkExperimentResponse(TypedDict):
     condition_code: Optional[str]
 
 
+class ToolConditionBalanceResponse(TypedDict):
+    """Response from test_condition_balance tool."""
+    num_users: int
+    site: str
+    target: str
+    enrollment_by_condition: Dict[str, int]
+
+
 # ============================================================================
 # Tool-Specific Domain Types  
 # ============================================================================
@@ -204,6 +212,7 @@ class GatheredInfo(TypedDict, total=False):
     get_decision_point_assignments_schema: Dict[str, Any]
     mark_decision_point_schema: Dict[str, Any]
     visit_decision_point_schema: Dict[str, Any]
+    test_condition_balance_schema: Dict[str, Any]
     
     # Context-specific information (dynamic keys like "conditions_for_assign-prog")
     # These will be stored with pattern: f"{info_type}_for_{context}"

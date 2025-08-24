@@ -126,6 +126,7 @@ class ToolActionType(str, Enum):
     GET_DECISION_POINT_ASSIGNMENTS = "get_decision_point_assignments"
     MARK_DECISION_POINT = "mark_decision_point"
     VISIT_DECISION_POINT = "visit_decision_point"
+    TEST_CONDITION_BALANCE = "test_condition_balance"
 
 
 class ToolErrorType(str, Enum):
