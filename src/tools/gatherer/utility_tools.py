@@ -17,7 +17,10 @@ from src.api.endpoints import get_context_metadata as api_get_context_metadata
 @register_gatherer_tool("get_core_terms")
 @auto_store("core_terms")
 def get_core_terms() -> Dict[str, Any]:
-    """Get comprehensive A/B testing and UpGrade terminology with definitions and options."""
+    """
+    Get comprehensive A/B testing and UpGrade terminology with definitions and options.
+    Available terms: app_context, unit_of_assignment, consistency_rule, post_experiment_rule, design_type, assignment_algorithm, decision_point, exclude_if_reached, condition, payload, segment, experiment_status
+    """
     return {
         "app_context": {
             "definition": "Indicates where the experiment will run, known to UpGrade. In general, this is the name of the client application.",
@@ -117,7 +120,10 @@ def get_core_terms() -> Dict[str, Any]:
 @register_gatherer_tool("get_assignment_terms")
 @auto_store("assignment_terms")
 def get_assignment_terms() -> Dict[str, Any]:
-    """Get comprehensive assignment behavior rules, consistency patterns, and interaction examples."""
+    """
+    Get comprehensive assignment behavior rules, consistency patterns, and interaction examples.
+    Related terms: unit_of_assignment, consistency_rule, post_experiment_rule, exclude_if_reached
+    """
     return {
         "assignment_combinations": {
             "individual_assignment_individual_consistency": {
